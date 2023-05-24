@@ -1,6 +1,5 @@
 <launch>
-    <node pkg="yolov7_ros" type="detect_ros.py" name="detect" output="screen"
-    ns="yolov7">
+    <node pkg="yolov7_ros" type="detect_ros.py" name="detect" output="screen" ns="yolov7">
         <!-- Download the official weights from the original repo -->
         <param name="weights_path" type="str"
         value="/home/kong/my_ws/yolov7-ros-pose-estimation/src/yolov7-ros/data/yolov7-w6-pose.pt"/>
@@ -8,14 +7,12 @@
         <param name="classes_path" type="str" value="/home/kong/my_ws/yolov7-ros-pose-estimation/src/yolov7-ros/class_labels/berkeley.txt" />
         <!-- topic name to subscribe to -->
         <param name="img_topic" type="str" value="/usb_cam/image_raw" />
-        <!-- topic name for the detection output -->
-        <param name="out_topic" type="str" value="yolov7" />
         <!-- confidence threshold -->
         <param name="conf_thresh" type="double" value="0.35" />
         <!-- intersection over union threshold -->
         <param name="iou_thresh" type="double" value="0.45" />
         <!-- queue size for publishing -->
-        <param name="queue_size" type="int" value="1" />
+        <param name="queue_size" type="int" value="10" />
         <!-- image size to which to resize each input image before feeding into the
         network (the final output is rescaled to the original image size) -->
         <param name="img_size" type="int" value="640" />
@@ -25,9 +22,29 @@
         <param name="device" type="str" value="cuda" />
     </node>
 
-    <node pkg="pose_tracker" type="pose_tracker.py" name="track" output="screen">
+    <node pkg="action-estimator" type="action_estimator.py" name="action_estimator" output="screen" ns="action">
+        <!-- topic name to subscribe to -->
+        <param name="img_topic" type="str" value="/yolov7/image" />
+        <!-- topic name to subscribe to -->
+        <param name="pose_topic" type="str" value="/yolov7/kpt" />
+        <!-- topic name for the detection output -->
+        <param name="out_topic" type="str" value="action_est" />
+        <!-- queue size for publishing -->
+        <param name="queue_size" type="int" value="10" />
+        <!-- flag whether to also publish image with the visualized detections -->
+        <param name="visualize" type="bool" value="true" />
     </node>
 
+    <!-- Use DeepSort to track humans and limb parts -->
+    <node pkg="pose-tracker" type="pose_tracker.py" name="track" output="screen" ns="tracker">
+        <param name="img_topic" type="str" value="/yolov7/image" />
+        <param name="pose_topic" type="str" value="/yolov7/kpt" />
+        <param name="out_topic" type="str" value="action_est" />
+        <param name="queue_size" type="int" value="10" />
+        <param name="visualize" type="bool" value="true" />
+    </node>
+
+    <!-- input data -->
     <node name="usb_cam" pkg="usb_cam" type="usb_cam_node" output="screen" >
         <param name="video_device" value="/dev/video0" />
         <param name="image_width" value="640" />
@@ -38,9 +55,9 @@
         <param name="io_method" value="mmap"/>
     </node>
     
-    <node name="image_view" pkg="image_view" type="image_view" respawn="false" output="screen">
+    <!-- <node name="image_view" pkg="image_view" type="image_view" respawn="false" output="screen">
         <remap from="image" to="/usb_cam/image_raw"/>
         <param name="autosize" value="true" />
-     </node>
+     </node> -->
 
 </launch>

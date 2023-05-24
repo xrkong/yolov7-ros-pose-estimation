@@ -30,7 +30,7 @@ devel_isolated/
 .cproject
 
 # qcreator stuff
-CMakeLists.txt.user
+# CMakeLists.txt.user
 
 srv/_*.py
 *.pcd
@@ -42,7 +42,7 @@ qtcreator-*
 /planning/docs
 /planning/src
 
-*~
+
 
 # Emacs
 .#*
@@ -53,3 +53,5 @@ CATKIN_IGNORE
 
 # yolo files
 *.pt
+log/
+.vscode/

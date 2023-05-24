@@ -15,8 +15,9 @@ import cv2
 from torchvision.transforms import ToTensor
 import numpy as np
 import rospy
+import json
 
-from vision_msgs.msg import Detection2DArray, Detection2D, BoundingBox2D
+from std_msgs.msg import String
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
 
@@ -61,8 +62,9 @@ class YoloV7:
     def inference(self, img: torch.Tensor):
         """
         :param img: tensor [c, h, w]
-        :returns: tensor of shape [num_boxes, 6], where each item is represented as
-            [x1, y1, x2, y2, confidence, class_id]
+        :returns: tensor of shape [num_boxes, 57], where each item is represented as
+            [x1, y1, x2, y2, confidence, class_id, K1_x, K1_y, K1_conf, ... , K17_x, K17_y, K17_conf]
+            and image with keypoints drawn on it.
         """
         frame_count = 0  #count no of frames
         total_fps = 0  #count total fps
@@ -104,23 +106,22 @@ class YoloV7:
         im0 = cv2.cvtColor(im0, cv2.COLOR_RGB2BGR) #reshape image format to (BGR)
         gn = torch.tensor(im0.shape)[[1, 0, 1, 0]]  # normalization gain whwh
 
-        for i, pose in enumerate(detections):  # detections per image
-        
+        for i, det in enumerate(detections):  # detections per image
             if len(detections):  #check if no pose
-                for c in pose[:, 5].unique(): # Print results
-                    n = (pose[:, 5] == c).sum()  # detections per class
-                    print("No of Objects in Current Frame : {}".format(n))
+                for c in det[:, 5].unique(): # Print results
+                    n = (det[:, 5] == c).sum()  # detections per class
+                    print("{} Objects in Current Frame".format(n))
                 
-                for det_index, (*xyxy, conf, cls) in enumerate(reversed(pose[:,:6])): #loop over poses for drawing on frame
+                for det_index, (*xyxy, conf, cls) in enumerate(reversed(det[:,:6])): #loop over poses for drawing on frame
                     c = int(cls)  # integer class
-                    kpts = pose[det_index, 6:]
+                    kpts = det[det_index, 6:]
                     label = None # if opt.hide_labels else (names[c] if opt.hide_conf else f'{names[c]} {conf:.2f}')
                     plot_one_box_kpt(xyxy, im0, label=label, color=colors(c, True), 
                                 line_thickness=3,kpt_label=True, kpts=kpts, steps=3, 
                                 orig_shape=im0.shape[:2])
 
         
-        end_time = time.time()  #Calculatio for FPS
+        end_time = time.time()  #Calculation for FPS
         fps = 1 / (end_time - start_time)
         total_fps += fps
         frame_count += 1
@@ -128,26 +129,24 @@ class YoloV7:
         fps_list.append(total_fps) #append FPS in list
         time_list.append(end_time - start_time) #append time in list
         
-        cv2.putText(im0, str(int(fps)), (7, 70), cv2.FONT_HERSHEY_SIMPLEX, 3, (100, 255, 0), 3, cv2.LINE_AA)
+        cv2.putText(im0, str(int(fps)), (7, 70), cv2.FONT_HERSHEY_SIMPLEX, 1, (100, 255, 0), 3, cv2.LINE_AA)
         # Stream results
         #if view_img:
-        cv2.imshow("YOLOv7 Pose Estimation Demo", im0)
+        #cv2.imshow("YOLOv7 Pose Estimation Demo", im0)
         cv2.waitKey(1)  # 1 millisecond
 
         #out.write(im0)  #writing the video frame
-        print(len(detections[0]))
+        #print(f'{detections}')
 
-        if detections:
-            detections = detections[0]
         return detections, im0
 
 
 class Yolov7Publisher:
     def __init__(self, img_topic: str, weights: str, conf_thresh: float = 0.5,
-                 iou_thresh: float = 0.45, pub_topic: str = "yolov7_detections",
+                 iou_thresh: float = 0.45, pub_topic: str = "yolov7",
                  device: str = "cuda",
                  img_size: Union[Tuple[int, int], None] = (640, 640),
-                 queue_size: int = 1, visualize: bool = False,
+                 queue_size: int = 1, visualize: bool = True,
                  class_labels: Union[List, None] = None):
         """
         :param img_topic: name of the image topic to listen to
@@ -171,9 +170,8 @@ class Yolov7Publisher:
         self.device = device
         self.class_labels = class_labels
 
-        #vis_topic = pub_topic + "visualization" if pub_topic.endswith("/") else \
-        #    pub_topic + "/visualization"
-        vis_topic = "/image_detection"
+        vis_topic = pub_topic + "image" if pub_topic.endswith("/") else \
+           pub_topic + "/image"
         self.visualization_publisher = rospy.Publisher(
             vis_topic, Image, queue_size=queue_size
         ) if visualize else None
@@ -188,9 +186,12 @@ class Yolov7Publisher:
         self.img_subscriber = rospy.Subscriber(
             img_topic, Image, self.process_img_msg
         )
-        # TODO: pubilsh detections as an array of Detection results
+
+        # pubilsh detections as an array of Detection results
+        pos_topic = pub_topic + "kpt" if pub_topic.endswith("/") else \
+           pub_topic + "/kpt"
         self.detection_publisher = rospy.Publisher(
-            pub_topic, Detection2DArray, queue_size=queue_size
+            pos_topic, String, queue_size=queue_size
         )
         rospy.loginfo("YOLOv7 initialization complete. Ready to start inference")
 
@@ -218,25 +219,45 @@ class Yolov7Publisher:
         img = img.to(self.device)
 
         # inference & rescaling the output to original img size
+        # Apply NMS
         detections, im0 = self.model.inference(img)
-        detections[:, :4] = rescale(
-            [h_scaled, w_scaled], detections[:, :4], [h_orig, w_orig])
-        detections[:, :4] = detections[:, :4].round()
+        '''
+        detections example:
+        tensor([[5.12900e+00, 4.38904e+01, 6.39624e+02, 6.38738e+02, 9.39202e-01, 0.00000e+00, # C_x, C_y, W, H, conf, class
+        4.47898e+02, 1.87086e+02, 9.98347e-01, # K0_x, K0_y, K0_conf
+        4.74549e+02, 1.60572e+02, 9.96893e-01, # K1_x, K1_y, K1_conf
+        4.09181e+02, 1.62192e+02, 9.97104e-01, # K2_x, K2_y, K2_conf
+        5.11035e+02, 2.07350e+02, 9.33736e-01, # K3_x, K3_y, K3_conf
+        3.57368e+02, 2.20482e+02, 8.57085e-01, # K4_x, K4_y, K4_conf
+        5.80041e+02, 4.27738e+02, 8.05406e-01, 
+        2.72383e+02, 4.23904e+02, 9.34467e-01, 
+        6.24336e+02, 6.13686e+02, 8.06896e-02, 
+        1.70459e+02, 6.15567e+02, 3.00836e-01, 
+        5.65607e+02, 5.99629e+02, 7.81805e-02, 
+        9.35799e+01, 6.16238e+02, 2.07950e-01, # ...
+        4.89327e+02, 6.28644e+02, 2.17725e-02, 
+        3.02137e+02, 6.24425e+02, 3.63526e-02, 
+        4.20300e+02, 5.49449e+02, 6.38045e-03,
+        2.77955e+02, 5.59165e+02, 9.96765e-03, 
+        3.54366e+02, 5.52154e+02, 6.15365e-03, 
+        2.96931e+02, 5.64074e+02, 7.98799e-03]], # K{16}_x, K{16}_y, K{16}_conf
+        device='cuda:0')
+        '''
 
-        # # TODO: publishing use detections to draw bounding boxes and key points
-        # TODO: publish output kpts to another node, detect waveing hands action for each objects
-        detection_msg = create_detection_msg(img_msg, detections)
+        if detections is None:
+            return
+
+        # publish detections as a string of json
+        # print(detections)
+        detection_msg = json.dumps(detections[0].tolist())
         self.detection_publisher.publish(detection_msg)
 
-        # # visualizing if required
-        # if self.visualization_publisher:
-        #     bboxes = [[int(x1), int(y1), int(x2), int(y2)]
-        #               for x1, y1, x2, y2 in detections[:, :4].tolist()]
-        #     classes = [int(c) for c in detections[:, 5].tolist()]
-        #     vis_img = draw_detections(np_img_orig, bboxes, classes,
-        #                               self.class_labels)
-        #     vis_msg = self.bridge.cv2_to_imgmsg(vis_img)
-        #     self.visualization_publisher.publish(vis_msg)
+        # visualizing if required
+        if self.visualization_publisher:
+            vis_msg = self.bridge.cv2_to_imgmsg(im0)
+            self.visualization_publisher.publish(vis_msg)
+        else:
+            pass
 
 
 if __name__ == "__main__":
@@ -247,11 +268,11 @@ if __name__ == "__main__":
     weights_path = rospy.get_param(ns + "weights_path")
     classes_path = rospy.get_param(ns + "classes_path")
     img_topic = rospy.get_param(ns + "img_topic")
-    out_topic = rospy.get_param(ns + "out_topic")
     conf_thresh = rospy.get_param(ns + "conf_thresh")
     iou_thresh = rospy.get_param(ns + "iou_thresh")
     queue_size = rospy.get_param(ns + "queue_size")
-    img_size = rospy.get_param(ns + "img_size")
+    img_width = rospy.get_param(ns + "img_width")
+    img_height = rospy.get_param(ns + "img_height")
     visualize = rospy.get_param(ns + "visualize")
     device = rospy.get_param(ns + "device")
 
@@ -273,13 +294,13 @@ if __name__ == "__main__":
 
     publisher = Yolov7Publisher(
         img_topic=img_topic,
-        pub_topic=out_topic,
+        pub_topic=rospy.get_namespace(),
         weights=weights_path,
         device=device,
         visualize=visualize,
         conf_thresh=conf_thresh,
         iou_thresh=iou_thresh,
-        img_size=(img_size, img_size),
+        img_size=(img_width, img_height),
         queue_size=queue_size,
         class_labels=classes
     )

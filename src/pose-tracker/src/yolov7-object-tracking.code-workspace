@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "../../../../../ws/yolov7-object-tracking"
+		},
+		{
+			"path": "../../.."
+		},
+		{
+			"path": "../../../../../ws/Face-mask-detection-using-yolo-v7-and-deep-sort"
+		}
+	],
+	"settings": {}
+}

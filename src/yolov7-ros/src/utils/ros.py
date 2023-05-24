@@ -16,8 +16,8 @@ def create_header():
 def create_detection_msg(img_msg: Image, detections: torch.Tensor) -> Detection2DArray:
     """
     :param img_msg: original ros image message
-    :param detections: torch tensor of shape [num_boxes, 6] where each element is
-        [x1, y1, x2, y2, confidence, class_id]
+    :param detections: torch tensor of shape [num_boxes, 51] where each element is
+        [x1, y1, x2, y2, confidence, class_id, K1_x, K1_y, K1_conf, ... , K17_x, K17_y, K17_conf]
     :returns: detections as a ros message of type Detection2DArray
     """
     detection_array_msg = Detection2DArray()
