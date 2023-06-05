@@ -1,13 +1,13 @@
 #!/usr/bin/python3
 
 from models.experimental import attempt_load
-from utils.general import non_max_suppression_kpt
+from utils.general import non_max_suppression_kpt, non_max_suppression
 from utils.ros import create_detection_msg
 from visualizer import draw_detections
-from utils.plots import output_to_keypoint, plot_skeleton_kpts,colors,plot_one_box_kpt
-import time
+from utils.plots import output_to_keypoint, plot_skeleton_kpts,colors,plot_one_box_kpt, plot_one_box
 
 import os
+import time
 from typing import Tuple, Union, List
 
 import torch
@@ -15,8 +15,8 @@ import cv2
 from torchvision.transforms import ToTensor
 import numpy as np
 import rospy
-import json
 
+import json
 from std_msgs.msg import String
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
@@ -48,6 +48,22 @@ def rescale(ori_shape: Tuple[int, int], boxes: Union[torch.Tensor, np.ndarray],
 
     return boxes
 
+def rescale_detection(detections, new_shape : Tuple[int, int],ori_shape: Tuple[int, int]):
+    xscale = new_shape[0] / ori_shape[0]
+    yscale = new_shape[1] / ori_shape[1]
+    #print(detections)
+    detections[:, 0] *= xscale
+    detections[:, 2] *= xscale
+    detections[:, 1] *= yscale
+    detections[:, 3] *= yscale
+
+    for det in detections:
+        if len(det) > 7:
+            det[6::3] *= xscale
+            det[7::3] *= yscale
+
+    return detections
+
 
 class YoloV7:
     def __init__(self, weights, conf_thresh: float = 0.5, iou_thresh: float = 0.45,
@@ -73,13 +89,15 @@ class YoloV7:
         start_time = time.time()
         img = img.unsqueeze(0)
         pred_results = self.model(img)[0]
-        # detections = non_max_suppression(
+        # detections_vhcl = non_max_suppression(
         #     pred_results, conf_thres=self.conf_thresh, iou_thres=self.iou_thresh
         # )
-        # output_data, _ = self.model(img)
-        detections = non_max_suppression_kpt(pred_results,   #Apply non max suppression
+        # output_data_vhcl, _ = self.model(img)
+
+
+        detections_pdst = non_max_suppression_kpt(pred_results,   #Apply non max suppression
                                             0.25,   # Conf. Threshold.
-                                            0.65, # IoU Threshold.
+                                            0.5, # IoU Threshold.
                                             nc=self.model.yaml['nc'], # Number of classes.
                                             nkpt=self.model.yaml['nkpt'], # Number of keypoints.
                                             kpt_label=True)
@@ -98,7 +116,7 @@ class YoloV7:
             y coordinate of the j keypoint
             conf - confidence in the j keypoint
         '''
-        output = output_to_keypoint(detections)
+        output_pdst = output_to_keypoint(detections_pdst)
 
         im0 = img[0].permute(1, 2, 0) * 255 # Change format [b, c, h, w] to [h, w, c] for displaying the image.
         im0 = im0.cpu().numpy().astype(np.uint8)
@@ -106,8 +124,8 @@ class YoloV7:
         im0 = cv2.cvtColor(im0, cv2.COLOR_RGB2BGR) #reshape image format to (BGR)
         gn = torch.tensor(im0.shape)[[1, 0, 1, 0]]  # normalization gain whwh
 
-        for i, det in enumerate(detections):  # detections per image
-            if len(detections):  #check if no pose
+        for i, det in enumerate(detections_pdst):  # detections per image
+            if len(detections_pdst):  #check if no pose
                 for c in det[:, 5].unique(): # Print results
                     n = (det[:, 5] == c).sum()  # detections per class
                     print("{} Objects in Current Frame".format(n))
@@ -119,6 +137,7 @@ class YoloV7:
                     plot_one_box_kpt(xyxy, im0, label=label, color=colors(c, True), 
                                 line_thickness=3,kpt_label=True, kpts=kpts, steps=3, 
                                 orig_shape=im0.shape[:2])
+                    #plot_one_box(xyxy, im0, label=label, color=colors(c, True), line_thickness=1)
 
         
         end_time = time.time()  #Calculation for FPS
@@ -132,13 +151,13 @@ class YoloV7:
         cv2.putText(im0, str(int(fps)), (7, 70), cv2.FONT_HERSHEY_SIMPLEX, 1, (100, 255, 0), 3, cv2.LINE_AA)
         # Stream results
         #if view_img:
-        #cv2.imshow("YOLOv7 Pose Estimation Demo", im0)
+        cv2.imshow("Pedestrian Pose Detector", im0)
         cv2.waitKey(1)  # 1 millisecond
 
         #out.write(im0)  #writing the video frame
         #print(f'{detections}')
 
-        return detections, im0
+        return detections_pdst, im0
 
 
 class Yolov7Publisher:
@@ -174,7 +193,7 @@ class Yolov7Publisher:
            pub_topic + "/image"
         self.visualization_publisher = rospy.Publisher(
             vis_topic, Image, queue_size=queue_size
-        ) if visualize else None
+        )
 
         self.bridge = CvBridge()
 
@@ -247,21 +266,26 @@ class Yolov7Publisher:
         if detections is None:
             return
 
-        # publish detections as a string of json
-        # print(detections)
+        # resize the detections to the original image size
+
+
+        # publishing
+        detections[0] = rescale_detection(detections[0], (img_msg.width,img_msg.height),(w_scaled, h_scaled))
         detection_msg = json.dumps(detections[0].tolist())
         self.detection_publisher.publish(detection_msg)
 
         # visualizing if required
         if self.visualization_publisher:
-            vis_msg = self.bridge.cv2_to_imgmsg(im0)
-            self.visualization_publisher.publish(vis_msg)
+            vis_msg = self.bridge.cv2_to_imgmsg(cv2.resize(im0,(img_msg.width,img_msg.height)))
+            #vis_msg = self.bridge.cv2_to_imgmsg(im0)
+            # vis_msg.header = img_msg.header
+            # self.visualization_publisher.publish(img_msg)
         else:
             pass
 
 
 if __name__ == "__main__":
-    rospy.init_node("yolov7_node")
+    rospy.init_node("yolov7_ped_node")
 
     ns = rospy.get_name() + "/"
 

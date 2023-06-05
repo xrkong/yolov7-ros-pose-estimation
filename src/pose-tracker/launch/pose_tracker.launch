@@ -1,4 +1,0 @@
-<launch>
-    <node pkg="pose_tracker" type="pose_tracker.py" name="track" output="screen">
-    </node>
-</launch>

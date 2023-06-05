@@ -1,5 +1,5 @@
 <launch>
-    <node pkg="yolov7_ros" type="detect_ros.py" name="detect" output="screen" ns="yolov7">
+    <node pkg="yolov7_ros" type="detect_ros_ped.py" name="detect" output="screen" ns="yolov7">
         <!-- Download the official weights from the original repo -->
         <param name="weights_path" type="str"
         value="/home/kong/my_ws/yolov7-ros-pose-estimation/src/yolov7-ros/data/yolov7-w6-pose.pt"/>
@@ -14,16 +14,15 @@
         <!-- queue size for publishing -->
         <param name="queue_size" type="int" value="10" />
         <!-- image size to which to resize each input image before feeding into the
-        network (the final output is rescaled to the original image size) 640 640 -->
-        <param name="img_width" type="int" value="1280" />
-        <param name="img_height" type="int" value="320" />
+        network (the final output is rescaled to the original image size) -->
+        <param name="img_size" type="int" value="640" />
         <!-- flag whether to also publish image with the visualized detections -->
         <param name="visualize" type="bool" value="true" />
         <!-- 'cuda' or 'cpu' -->
         <param name="device" type="str" value="cuda" />
     </node>
 
-    <node pkg="action-estimator" type="action_estimator.py" name="action_estimator" output="screen" ns="action">
+    <node pkg="action_estimator" type="action_estimator.py" name="action_estimator" output="screen" ns="action">
         <!-- topic name to subscribe to -->
         <param name="img_topic" type="str" value="/yolov7/image" />
         <!-- topic name to subscribe to -->
@@ -37,7 +36,7 @@
     </node>
 
     <!-- Use DeepSort to track humans and limb parts -->
-    <node pkg="pose-tracker" type="pose_tracker.py" name="track" output="screen" ns="tracker">
+    <node pkg="mo_tracker" type="mo_tracker.py" name="track" output="screen" ns="tracker">
         <param name="img_topic" type="str" value="/yolov7/image" />
         <param name="pose_topic" type="str" value="/yolov7/kpt" />
         <param name="out_topic" type="str" value="action_est" />
@@ -46,14 +45,19 @@
     </node>
 
     <!-- input data -->
-    <node pkg="image_folder_publisher" type="image_folder_publisher.py" name="image_folder_publisher" output="screen">
-        <param name="sleep" value="5"/>
-        <param name="loop" value="-1" />
-        <param name="topic_name" value="/usb_cam/image_raw" />
-        <param name="publish_rate" value="30"/>
-        <param name="sort_files" value="True" />
-        <param name="frame_id" value="camera" />
-        <param name="image_folder" value="/home/kong/dataset/kitti/data_tracking_image_2/testing/image_02/0028/" />
+    <node name="usb_cam" pkg="usb_cam" type="usb_cam_node" output="screen" >
+        <param name="video_device" value="/dev/video0" />
+        <param name="image_width" value="640" />
+        <param name="image_height" value="480" />
+        <param name="pixel_format" value="yuyv" />
+        <param name="color_format" value="yuv422p" />
+        <param name="camera_frame_id" value="usb_cam" />
+        <param name="io_method" value="mmap"/>
     </node>
+    
+    <!-- <node name="image_view" pkg="image_view" type="image_view" respawn="false" output="screen">
+        <remap from="image" to="/usb_cam/image_raw"/>
+        <param name="autosize" value="true" />
+     </node> -->
 
 </launch>

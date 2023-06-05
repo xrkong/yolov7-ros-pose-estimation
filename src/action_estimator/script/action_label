@@ -1,0 +1,25 @@
+import csv
+import cv2
+import itertools
+import numpy as np
+import pandas as pd
+import os
+import sys
+import tempfile
+import tqdm
+
+from matplotlib import pyplot as plt
+from matplotlib.collections import LineCollection
+
+import tensorflow as tf
+import tensorflow_hub as hub
+from tensorflow import keras
+
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+
+'''
+TODO: 
+- [ ] subscribe pkt sequences, label them and save to csv file https://www.tensorflow.org/lite/tutorials/pose_classification
+- [ ] find/create a suitable dataset to train model
+'''

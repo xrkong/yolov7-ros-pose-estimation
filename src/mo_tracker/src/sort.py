@@ -103,7 +103,7 @@ class KalmanBoxTracker(object):
         CX = (bbox[0]+bbox[2])//2
         CY = (bbox[1]+bbox[3])//2
         self.centroidarr.append((CX,CY))
-        self.object_data = bbox[5:57]
+        self.object_data = bbox #bbox[5:57]
         
         
         #keep yolov5 detected class information
@@ -117,7 +117,7 @@ class KalmanBoxTracker(object):
         self.history = []
         self.hits += 1
         self.hit_streak += 1
-        self.object_data = bbox[5:57]
+        self.object_data = bbox #[5:57]
         self.kf.update(convert_bbox_to_z(bbox))
         #self.detclass = bbox[5]
         CX = (bbox[0]+bbox[2])//2
@@ -227,7 +227,7 @@ class Sort(object):
     def getTrackers(self,):
         return self.trackers
         
-    def update(self, dets= np.empty((0,6)), unique_color = False):
+    def update(self, dets= np.empty((0,6)), unique_color = True):
         """
         Parameters:
         'dets' - a numpy array of detection in the format [[x1, y1, x2, y2, score], [x1,y1,x2,y2,score],...]

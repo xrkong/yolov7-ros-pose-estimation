@@ -1,0 +1,11 @@
+<launch>
+    <node pkg="mo_tracker" type="mo_tracker.py" name="track" output="screen" ns="tracker">
+        <param name="img_topic" type="str" value="/usb_cam/image_raw" />
+        <param name="pose_topic" type="str" value="/yolov7/kpt" />
+        <param name="bbox_topic" type="str" value="/yolov7/object/bbox" />
+        <param name="out_topic" type="str" value="action_est" />
+        <param name="queue_size" type="int" value="10" />
+        <param name="visualize" type="bool" value="true" />
+        <param name="classes_path" type="str" value="/home/kong/my_ws/yolov7-ros-pose-estimation/src/yolov7_ros/class_labels/coco.txt" />
+    </node>
+</launch>

@@ -62,11 +62,13 @@ class image_folder_publisher:
                         if isfile(join(self._image_folder, f)):
                             cv_image = cv2.imread(join(self._image_folder, f))
                             if cv_image is not None:
+                                file_name = os.path.splitext(f)[0]
                                 ros_msg = self._cv_bridge.cv2_to_imgmsg(cv_image, "bgr8")
-                                ros_msg.header.frame_id = self._frame_id
+                                ros_msg.header.frame_id = file_name # for kitti dataset, image name is the frame id
                                 ros_msg.header.stamp = rospy.Time.now()
                                 self._image_publisher.publish(ros_msg)
                                 rospy.loginfo("[%s] Published %s", self.__app_name, join(self._image_folder, f))
+                                rospy.loginfo("[%s] Published %s", self.__app_name, file_name)                                
                             else:
                                 rospy.loginfo("[%s] Invalid image file %s", self.__app_name, join(self._image_folder, f))
                             ros_rate.sleep()
