@@ -1,26 +1,26 @@
 #!/usr/bin/python3
-
 from models.experimental import attempt_load
-from utils.general import non_max_suppression_kpt, non_max_suppression
-from utils.ros import create_detection_msg
-from visualizer import draw_detections
-from utils.plots import output_to_keypoint, plot_skeleton_kpts,colors,plot_one_box_kpt, plot_one_box
+from utils.general import non_max_suppression_kpt
+from .utils.plots import output_to_keypoint
+from .utils.plots import plot_one_box_kpt
+from .visualizer import draw_detections
 
-import os
+from typing import Tuple, Union
 import time
-from typing import Tuple, Union, List
 
 import torch
 import cv2
 from torchvision.transforms import ToTensor
 import numpy as np
-import rospy
+import rclpy
+import rclpy.node
+from rcl_interfaces.msg import ParameterDescriptor
+from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy
 
 import json
-from std_msgs.msg import String
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
-
+from std_msgs.msg import String
 
 def parse_classes_file(path):
     classes = []
@@ -29,7 +29,6 @@ def parse_classes_file(path):
             line = line.replace("\n", "")
             classes.append(line)
     return classes
-
 
 def rescale(ori_shape: Tuple[int, int], boxes: Union[torch.Tensor, np.ndarray],
             target_shape: Tuple[int, int]):
@@ -63,7 +62,6 @@ def rescale_detection(detections, new_shape : Tuple[int, int],ori_shape: Tuple[i
             det[7::3] *= yscale
 
     return detections
-
 
 class YoloV7:
     def __init__(self, weights, conf_thresh: float = 0.5, iou_thresh: float = 0.45,
@@ -134,7 +132,7 @@ class YoloV7:
                     c = int(cls)  # integer class
                     kpts = det[det_index, 6:]
                     label = None # if opt.hide_labels else (names[c] if opt.hide_conf else f'{names[c]} {conf:.2f}')
-                    plot_one_box_kpt(xyxy, im0, label=label, color=colors(c, True), 
+                    plot_one_box_kpt(xyxy, im0, label=label, #color=colors(c, True), 
                                 line_thickness=3,kpt_label=True, kpts=kpts, steps=3, 
                                 orig_shape=im0.shape[:2])
                     #plot_one_box(xyxy, im0, label=label, color=colors(c, True), line_thickness=1)
@@ -159,60 +157,87 @@ class YoloV7:
 
         return detections_pdst, im0
 
-
-class Yolov7Publisher:
-    def __init__(self, img_topic: str, weights: str, conf_thresh: float = 0.5,
-                 iou_thresh: float = 0.45, pub_topic: str = "yolov7",
-                 device: str = "cuda",
-                 img_size: Union[Tuple[int, int], None] = (640, 640),
-                 queue_size: int = 1, visualize: bool = True,
-                 class_labels: Union[List, None] = None):
-        """
-        :param img_topic: name of the image topic to listen to
-        :param weights: path/to/yolo_weights.pt
-        :param conf_thresh: confidence threshold
-        :param iou_thresh: intersection over union threshold
-        :param pub_topic: name of the output topic (will be published under the
-            namespace '/yolov7')
-        :param device: device to do inference on (e.g., 'cuda' or 'cpu')
-        :param queue_size: queue size for publishers
-        :visualize: flag to enable publishing the detections visualized in the image
-        :param img_size: (height, width) to which the img is resized before being
-            fed into the yolo network. Final output coordinates will be rescaled to
-            the original img size.
-        :param class_labels: List of length num_classes, containing the class
-            labels. The i-th element in this list corresponds to the i-th
-            class id. Only for viszalization. If it is None, then no class
-            labels are visualized.
-        """
-        self.img_size = img_size
-        self.device = device
-        self.class_labels = class_labels
-
-        vis_topic = pub_topic + "image" if pub_topic.endswith("/") else \
-           pub_topic + "/image"
-        self.visualization_publisher = rospy.Publisher(
-            vis_topic, Image, queue_size=queue_size
+class Yolov7Publisher(rclpy.node.Node):
+    def __init__(self):
+        super().__init__('detect_car')
+        self.qos_profile =  QoSProfile(
+            reliability=QoSReliabilityPolicy.BEST_EFFORT,
+            history=QoSHistoryPolicy.KEEP_LAST,
+            depth=1,
         )
+
+        weights_path_des = ParameterDescriptor(description='absolute path to the weights file')
+        classs_path_des = ParameterDescriptor(description='absolute path to the classes file for yolo')
+        img_topic_des = ParameterDescriptor(description='name of the image topic to listen to')
+        conf_thresh_des = ParameterDescriptor(description='confidence threshold')
+        iou_thresh_des = ParameterDescriptor(description='intersection over union threshold')
+        queue_size_des = ParameterDescriptor(description='queue size for publishers')
+        img_width_des = ParameterDescriptor(description='width of the image')
+        img_height_des = ParameterDescriptor(description='height of the image')
+        visualize_des = ParameterDescriptor(description='flag to enable publishing the detections visualized in the image')
+        device_des = ParameterDescriptor(description='device to do inference on (e.g., "cuda" or "cpu")')
+
+        self.declare_parameter('weights_path', '/home/kong/my_ws/nn_models/yolov7/yolov7-w6-pose.pt', weights_path_des)
+        self.declare_parameter('classes_path', '/home/kong/my_ws/yolov7-ros-pose-estimation/src/yolov7_ros/class_labels/berkeley.txt', classs_path_des)
+        self.declare_parameter('img_topic', '/usb_cam/image_raw', img_topic_des)
+        self.declare_parameter('conf_thresh', 0.35, conf_thresh_des)
+        self.declare_parameter('iou_thresh', 0.45, iou_thresh_des)
+        self.declare_parameter('queue_size', 10, queue_size_des)
+        self.declare_parameter('img_width', 1280, img_width_des)
+        self.declare_parameter('img_height', 320, img_height_des)
+        self.declare_parameter('visualize', True, visualize_des)
+        self.declare_parameter('device', 'cuda', device_des)
+        
+        self.weights = self.get_parameter('weights_path').get_parameter_value().string_value
+        self.classes_path = self.get_parameter('classes_path').get_parameter_value().string_value
+        self.img_topic = self.get_parameter('img_topic').get_parameter_value().string_value
+        self.conf_thresh = self.get_parameter('conf_thresh').get_parameter_value().double_value
+        self.iou_thresh = self.get_parameter('iou_thresh').get_parameter_value().double_value
+        self.queue_size = self.get_parameter('queue_size').get_parameter_value().integer_value
+        self.img_width = self.get_parameter('img_width').get_parameter_value().integer_value
+        self.img_height = self.get_parameter('img_height').get_parameter_value().integer_value
+        self.visualize = self.get_parameter('visualize').get_parameter_value().bool_value
+        self.device = self.get_parameter('device').get_parameter_value().string_value
+
+        self.img_size = (self.img_width, self.img_height)
+        self.class_labels = parse_classes_file(self.get_parameter('classes_path').get_parameter_value().string_value)
+        
+        print("class labels: ", self.class_labels)
+
+        # vis_topic = pub_topic + "visualization" if pub_topic.endswith("/") else \
+        #     pub_topic + "/visualization"
+        self.visualization_publisher = self.create_publisher(Image, '/yolov7/visualization', 10)
+
+        # rospy.Publisher(
+        #     vis_topic, Image, queue_size=queue_size
+        # ) if visualize else None
 
         self.bridge = CvBridge()
 
         self.tensorize = ToTensor()
         self.model = YoloV7(
-            weights=weights, conf_thresh=conf_thresh, iou_thresh=iou_thresh,
-            device=device
+            weights=self.weights, conf_thresh=self.conf_thresh, iou_thresh=self.iou_thresh,
+            device=self.device
         )
-        self.img_subscriber = rospy.Subscriber(
-            img_topic, Image, self.process_img_msg
-        )
+        # self.img_subscriber = rospy.Subscriber(
+        #     img_topic, Image, self.process_img_msg
+        # )
+        self.camera_info_sub = self.create_subscription(
+            Image, self.img_topic, self.process_img_msg, 1)
 
-        # pubilsh detections as an array of Detection results
-        pos_topic = pub_topic + "kpt" if pub_topic.endswith("/") else \
-           pub_topic + "/kpt"
-        self.detection_publisher = rospy.Publisher(
-            pos_topic, String, queue_size=queue_size
+        bbox_topic = self.create_publisher(String, '/yolov7/bbox', 10)
+
+        # bbox_topic = pub_topic + "bbox" if pub_topic.endswith("/") else \
+        #     pub_topic + "/bbox"
+        self.detection_publisher = self.create_publisher(
+            msg_type=String,
+            topic="/bbox",
+            qos_profile=self.qos_profile
         )
-        rospy.loginfo("YOLOv7 initialization complete. Ready to start inference")
+        # self.detection_publisher = self.create_publisher(
+        #     bbox_topic, String, qos_profile=self.qos_profile
+        # )
+        self.get_logger().info('Hello %s!' % "YOLOv7 initialization complete. Ready to start inference")
 
     def process_img_msg(self, img_msg: Image):
         """ callback function for publisher """
@@ -238,7 +263,6 @@ class Yolov7Publisher:
         img = img.to(self.device)
 
         # inference & rescaling the output to original img size
-        # Apply NMS
         detections, im0 = self.model.inference(img)
         '''
         detections example:
@@ -272,7 +296,9 @@ class Yolov7Publisher:
         # publishing
         detections[0] = rescale_detection(detections[0], (img_msg.width,img_msg.height),(w_scaled, h_scaled))
         detection_msg = json.dumps(detections[0].tolist())
-        self.detection_publisher.publish(detection_msg)
+        msg = String()
+        msg.data = detection_msg
+        self.detection_publisher.publish(msg)
 
         # visualizing if required
         if self.visualization_publisher:
@@ -283,50 +309,10 @@ class Yolov7Publisher:
         else:
             pass
 
+def main():
+    rclpy.init()
+    node = Yolov7Publisher()
+    rclpy.spin(node)
 
-if __name__ == "__main__":
-    rospy.init_node("yolov7_ped_node")
-
-    ns = rospy.get_name() + "/"
-
-    weights_path = rospy.get_param(ns + "weights_path")
-    classes_path = rospy.get_param(ns + "classes_path")
-    img_topic = rospy.get_param(ns + "img_topic")
-    conf_thresh = rospy.get_param(ns + "conf_thresh")
-    iou_thresh = rospy.get_param(ns + "iou_thresh")
-    queue_size = rospy.get_param(ns + "queue_size")
-    img_width = rospy.get_param(ns + "img_width")
-    img_height = rospy.get_param(ns + "img_height")
-    visualize = rospy.get_param(ns + "visualize")
-    device = rospy.get_param(ns + "device")
-
-    # some sanity checks
-    if not os.path.isfile(weights_path):
-        raise FileExistsError(f"Weights not found ({weights_path}).")
-    
-    if classes_path: 
-        if not os.path.isfile(classes_path):
-            raise FileExistsError(f"Classes file not found ({classes_path}).")
-        classes = parse_classes_file(classes_path)
-    else:
-        rospy.loginfo("No class file provided. Class labels will not be visualized.")
-        classes = None
-
-    if not ("cuda" in device or "cpu" in device):
-        raise ValueError("Check your device.")
-
-
-    publisher = Yolov7Publisher(
-        img_topic=img_topic,
-        pub_topic=rospy.get_namespace(),
-        weights=weights_path,
-        device=device,
-        visualize=visualize,
-        conf_thresh=conf_thresh,
-        iou_thresh=iou_thresh,
-        img_size=(img_width, img_height),
-        queue_size=queue_size,
-        class_labels=classes
-    )
-
-    rospy.spin()
+if __name__ == '__main__':
+    main()
