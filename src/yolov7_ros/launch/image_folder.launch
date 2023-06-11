@@ -1,7 +1,0 @@
-<launch>
-    <include file="$(find image_folder_publisher)/launch/publisher.launch"></include>
-    <include file="$(find yolov7_ros)/launch/detector.launch"></include>    
-    <include file="$(find mo_tracker)/launch/tracker.launch"></include>
-
-    <!-- <include file="$(find action_estimator)/launch/estimator.launch"></include> -->
-</launch>
