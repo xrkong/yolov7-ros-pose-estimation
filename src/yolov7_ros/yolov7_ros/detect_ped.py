@@ -165,7 +165,7 @@ class Yolov7Publisher(rclpy.node.Node):
 
         self.declare_parameter('weights_path', '/home/kong/my_ws/nn_models/yolov7/yolov7-w6-pose.pt', weights_path_des)
         self.declare_parameter('classes_path', '/home/kong/my_ws/yolov7-ros-pose-estimation/src/yolov7_ros/class_labels/berkeley.txt', classs_path_des)
-        self.declare_parameter('img_topic', '/usb_cam/image_raw', img_topic_des)
+        self.declare_parameter('img_topic', '/image_raw', img_topic_des)
         self.declare_parameter('conf_thresh', 0.35, conf_thresh_des)
         self.declare_parameter('iou_thresh', 0.45, iou_thresh_des)
         self.declare_parameter('queue_size', 10, queue_size_des)
@@ -200,7 +200,7 @@ class Yolov7Publisher(rclpy.node.Node):
             device=self.device
         )
         self.camera_info_sub = self.create_subscription(
-            Image, self.img_topic, self.process_img_msg, 1)
+            Image, self.img_topic, self.process_img_msg, 10)
 
         bbox_topic = self.create_publisher(String, '/yolov7/bbox', 10)
         self.detection_publisher = self.create_publisher(

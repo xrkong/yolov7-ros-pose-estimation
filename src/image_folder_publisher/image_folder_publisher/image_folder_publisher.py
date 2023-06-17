@@ -18,15 +18,10 @@ from cv_bridge import CvBridge, CvBridgeError
 class image_folder_publisher(rclpy.node.Node):
     def __init__(self):
         super().__init__('image_folder_publisher')
-        self.qos_profile =  QoSProfile(
-            reliability=QoSReliabilityPolicy.BEST_EFFORT,
-            history=QoSHistoryPolicy.KEEP_LAST,
-            depth=1,
-        )
 
         self._cv_bridge = CvBridge()
 
-        self.declare_parameter('topic_name', '/usb_cam/image_raw', ParameterDescriptor(description='image topic name'))
+        self.declare_parameter('topic_name', '/image_raw', ParameterDescriptor(description='image topic name'))
         self.declare_parameter('publish_rate', 5, ParameterDescriptor(description='rate to publish images'))
         self.declare_parameter('sort_files', True, ParameterDescriptor(description='sort files in the folder'))
         self.declare_parameter('frame_id', 'camera', ParameterDescriptor(description='frame id of the image'))
@@ -38,8 +33,7 @@ class image_folder_publisher(rclpy.node.Node):
         self._topic_name = self.get_parameter('topic_name').get_parameter_value().string_value
         self.get_logger().info(f"(topic_name) Publishing Images to topic {self._topic_name}")
 
-        self._image_publisher = self.create_publisher(msg_type=Image, topic=self._topic_name, qos_profile=self.qos_profile)
-
+        self._image_publisher = self.create_publisher(Image, self._topic_name, 10)
         self._rate = self.get_parameter('publish_rate').get_parameter_value().integer_value
         self.get_logger().info(f"(publish_rate) Publish rate set to {self._rate} hz")
 
@@ -54,7 +48,7 @@ class image_folder_publisher(rclpy.node.Node):
 
         self._image_folder = self.get_parameter('image_folder').get_parameter_value().string_value
         self.get_logger().info(f" (image_folder) Image folder set to {self._image_folder}")
-
+        # BUG: sleep doesn't work
         self._sleep = self.get_parameter('sleep').get_parameter_value().double_value
         #time.sleep(self._sleep)
         self.get_logger().info(f" (sleep) Sleep {self._sleep} seconds after each image")
@@ -65,31 +59,33 @@ class image_folder_publisher(rclpy.node.Node):
         self.get_logger().info(f" Reading images from {self._image_folder}")
 
     def run(self):
-        rosrate = self.create_rate(self._rate, self.get_clock())
-
         files_in_dir = [f for f in listdir(self._image_folder) if isfile(join(self._image_folder, f))]
         if self._sort_files:
             files_in_dir.sort()
         try:
             while self._loop != 0:
                 for f in files_in_dir:
-                    self.get_logger().info(f" Reading {f}")
+                    #self.get_logger().info(f" Reading {f}")
                     if rclpy.ok():
                         if isfile(join(self._image_folder, f)):
                             cv_image = cv2.imread(join(self._image_folder, f))
                             if cv_image is not None:
                                 file_name = os.path.splitext(f)[0]
+                                ros_msg = Image()
                                 ros_msg = self._cv_bridge.cv2_to_imgmsg(cv_image, "bgr8")
-                                ros_msg.header.frame_id = file_name # for kitti dataset, image name is the frame id
-                                ros_msg.header.stamp = self.get_clock().now().to_msg()
+                                #print(ros_msg.width, ros_msg.height, ros_msg.encoding, ros_msg.step)
+                                #ros_msg.header.frame_id = file_name # for kitti dataset, image name is the frame id
+                                #ros_msg.header.stamp = self.get_clock().now().to_msg()
                                 self._image_publisher.publish(ros_msg)
                                 self.get_logger().info(f"Published {f}")
+                                cv2.imshow('image', cv_image)
+                                cv2.waitKey(1)
                             else:
                                 self.get_logger().info(f"Invalid image file {f}")
-                            #rosrate.sleep()
+                            time.sleep(1/self._rate)
                     else:
                         return
-                self.get_logger().info(f"Looping {self._loop} time(s) left")
+                #self.get_logger().info(f"Looping {self._loop} time(s) left")
                 self._loop = self._loop - 1
         except CvBridgeError as e:
             self.get_logger().error(e)
