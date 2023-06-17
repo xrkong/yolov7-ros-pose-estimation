@@ -19,31 +19,6 @@ from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
 from std_msgs.msg import String
 
-class DetectorCar(rclpy.node.Node):
-    def __init__(self):
-        super().__init__('detect_car')
-        weights_path_des = ParameterDescriptor(description='absolute path to the weights file')
-        classs_path_des = ParameterDescriptor(description='absolute path to the classes file for yolo')
-        img_topic_des = ParameterDescriptor(description='name of the image topic to listen to')
-        conf_thresh_des = ParameterDescriptor(description='confidence threshold')
-        iou_thresh_des = ParameterDescriptor(description='intersection over union threshold')
-        queue_size_des = ParameterDescriptor(description='queue size for publishers')
-        img_width_des = ParameterDescriptor(description='width of the image')
-        img_height_des = ParameterDescriptor(description='height of the image')
-        visualize_des = ParameterDescriptor(description='flag to enable publishing the detections visualized in the image')
-        device_des = ParameterDescriptor(description='device to do inference on (e.g., "cuda" or "cpu")')
-
-        self.declare_parameter('weights_path', '/home/kong/my_ws/nn_models/yolov7/yolov7-w6-pose.pt', weights_path_des)
-        self.declare_parameter('classes_path', '/home/kong/my_ws/yolov7-ros-pose-estimation/src/yolov7_ros/class_labels/coco.txt', classs_path_des)
-        self.declare_parameter('img_topic', '/image_raw', img_topic_des)
-        self.declare_parameter('conf_thresh', 0.35, conf_thresh_des)
-        self.declare_parameter('iou_thresh', 0.45, iou_thresh_des)
-        self.declare_parameter('queue_size', 10, queue_size_des)
-        self.declare_parameter('img_width', 1280, img_width_des)
-        self.declare_parameter('img_height', 320, img_height_des)
-        self.declare_parameter('visualize', True, visualize_des)
-        self.declare_parameter('device', 'cuda', device_des)
-
 def parse_classes_file(path):
     classes = []
     with open(path, "r") as f:
@@ -142,14 +117,7 @@ class Yolov7Publisher(rclpy.node.Node):
         self.class_labels = parse_classes_file(self.get_parameter('classes_path').get_parameter_value().string_value)
         
         print("class labels: ", self.class_labels)
-
-        # vis_topic = pub_topic + "visualization" if pub_topic.endswith("/") else \
-        #     pub_topic + "/visualization"
         self.visualization_publisher = self.create_publisher(Image, '/yolov7/visualization', 10)
-
-        # rospy.Publisher(
-        #     vis_topic, Image, queue_size=queue_size
-        # ) if visualize else None
 
         self.bridge = CvBridge()
 
@@ -158,24 +126,15 @@ class Yolov7Publisher(rclpy.node.Node):
             weights=self.weights, conf_thresh=self.conf_thresh, iou_thresh=self.iou_thresh,
             device=self.device
         )
-        # self.img_subscriber = rospy.Subscriber(
-        #     img_topic, Image, self.process_img_msg
-        # )
         self.camera_info_sub = self.create_subscription(
             Image, self.img_topic, self.process_img_msg, 1)
 
         bbox_topic = self.create_publisher(String, '/yolov7/bbox', 10)
-
-        # bbox_topic = pub_topic + "bbox" if pub_topic.endswith("/") else \
-        #     pub_topic + "/bbox"
         self.detection_publisher = self.create_publisher(
             msg_type=String,
             topic="/bbox",
             qos_profile=self.qos_profile
         )
-        # self.detection_publisher = self.create_publisher(
-        #     bbox_topic, String, qos_profile=self.qos_profile
-        # )
         self.get_logger().info('Hello %s!' % "YOLOv7 initialization complete. Ready to start inference")
 
     def process_img_msg(self, img_msg: Image):
@@ -220,12 +179,11 @@ class Yolov7Publisher(rclpy.node.Node):
             classes = [int(c) for c in detections[:, 5].tolist()]
             vis_img = draw_detections(np_img_orig, bboxes, classes,
                                       self.class_labels)
-            vis_msg = self.bridge.cv2_to_imgmsg(cv2.resize(vis_img,(img_msg.width,img_msg.height)))
-            cv2.imshow("Object Detector Output", vis_img)
+            vis_msg = self.bridge.cv2_to_imgmsg(cv2.resize(vis_img,(w_scaled, h_scaled)))
+            cv2.imshow("Object Detector", vis_img)
             cv2.waitKey(1)
             vis_msg = self.bridge.cv2_to_imgmsg(vis_img)
             self.visualization_publisher.publish(vis_msg)
-
 
 def main():
     rclpy.init()

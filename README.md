@@ -6,3 +6,6 @@ src/yolov7-ros from https://github.com/lukazso/yolov7-ros
 src/pose-tracker/src/sort.py from https://github.com/abewley/sort  
 
 I made some changes for pedestrian track. 
+
+remember to add the path to ```$PYTHONPATH``` or python cannot find the module like    
+```No module named 'xxxx'```

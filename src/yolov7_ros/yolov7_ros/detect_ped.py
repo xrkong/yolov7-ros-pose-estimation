@@ -87,12 +87,6 @@ class YoloV7:
         start_time = time.time()
         img = img.unsqueeze(0)
         pred_results = self.model(img)[0]
-        # detections_vhcl = non_max_suppression(
-        #     pred_results, conf_thres=self.conf_thresh, iou_thres=self.iou_thresh
-        # )
-        # output_data_vhcl, _ = self.model(img)
-
-
         detections_pdst = non_max_suppression_kpt(pred_results,   #Apply non max suppression
                                             0.25,   # Conf. Threshold.
                                             0.5, # IoU Threshold.
@@ -147,14 +141,6 @@ class YoloV7:
         time_list.append(end_time - start_time) #append time in list
         
         cv2.putText(im0, str(int(fps)), (7, 70), cv2.FONT_HERSHEY_SIMPLEX, 1, (100, 255, 0), 3, cv2.LINE_AA)
-        # Stream results
-        #if view_img:
-        cv2.imshow("Pedestrian Pose Detector", im0)
-        cv2.waitKey(1)  # 1 millisecond
-
-        #out.write(im0)  #writing the video frame
-        #print(f'{detections}')
-
         return detections_pdst, im0
 
 class Yolov7Publisher(rclpy.node.Node):
@@ -204,13 +190,7 @@ class Yolov7Publisher(rclpy.node.Node):
         
         print("class labels: ", self.class_labels)
 
-        # vis_topic = pub_topic + "visualization" if pub_topic.endswith("/") else \
-        #     pub_topic + "/visualization"
         self.visualization_publisher = self.create_publisher(Image, '/yolov7/visualization', 10)
-
-        # rospy.Publisher(
-        #     vis_topic, Image, queue_size=queue_size
-        # ) if visualize else None
 
         self.bridge = CvBridge()
 
@@ -219,24 +199,15 @@ class Yolov7Publisher(rclpy.node.Node):
             weights=self.weights, conf_thresh=self.conf_thresh, iou_thresh=self.iou_thresh,
             device=self.device
         )
-        # self.img_subscriber = rospy.Subscriber(
-        #     img_topic, Image, self.process_img_msg
-        # )
         self.camera_info_sub = self.create_subscription(
             Image, self.img_topic, self.process_img_msg, 1)
 
         bbox_topic = self.create_publisher(String, '/yolov7/bbox', 10)
-
-        # bbox_topic = pub_topic + "bbox" if pub_topic.endswith("/") else \
-        #     pub_topic + "/bbox"
         self.detection_publisher = self.create_publisher(
             msg_type=String,
-            topic="/bbox",
+            topic="/yolov7/bbox",
             qos_profile=self.qos_profile
         )
-        # self.detection_publisher = self.create_publisher(
-        #     bbox_topic, String, qos_profile=self.qos_profile
-        # )
         self.get_logger().info('Hello %s!' % "YOLOv7 initialization complete. Ready to start inference")
 
     def process_img_msg(self, img_msg: Image):
@@ -289,12 +260,8 @@ class Yolov7Publisher(rclpy.node.Node):
 
         if detections is None:
             return
-
-        # resize the detections to the original image size
-
-
         # publishing
-        detections[0] = rescale_detection(detections[0], (img_msg.width,img_msg.height),(w_scaled, h_scaled))
+        detections[0] = rescale_detection(detections[0], (h_orig, w_orig),(w_scaled, h_scaled))
         detection_msg = json.dumps(detections[0].tolist())
         msg = String()
         msg.data = detection_msg
@@ -302,10 +269,9 @@ class Yolov7Publisher(rclpy.node.Node):
 
         # visualizing if required
         if self.visualization_publisher:
-            vis_msg = self.bridge.cv2_to_imgmsg(cv2.resize(im0,(img_msg.width,img_msg.height)))
-            #vis_msg = self.bridge.cv2_to_imgmsg(im0)
-            # vis_msg.header = img_msg.header
-            # self.visualization_publisher.publish(img_msg)
+            im0 = cv2.resize(im0,(w_orig, h_orig))
+            cv2.imshow("Pedestrian Detector", im0)
+            cv2.waitKey(1) 
         else:
             pass
 
