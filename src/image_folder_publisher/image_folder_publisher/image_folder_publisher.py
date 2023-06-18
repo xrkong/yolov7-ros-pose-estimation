@@ -48,10 +48,8 @@ class image_folder_publisher(rclpy.node.Node):
 
         self._image_folder = self.get_parameter('image_folder').get_parameter_value().string_value
         self.get_logger().info(f" (image_folder) Image folder set to {self._image_folder}")
-        # BUG: sleep doesn't work
         self._sleep = self.get_parameter('sleep').get_parameter_value().double_value
-        #time.sleep(self._sleep)
-        self.get_logger().info(f" (sleep) Sleep {self._sleep} seconds after each image")
+        self.get_logger().info(f" (sleep) Sleep {self._sleep} seconds")
         
         if self._image_folder == '' or not os.path.exists(self._image_folder) or not os.path.isdir(self._image_folder):
             self.get_logger().fatal(f" (image_folder) Invalid Image folder {self._image_folder}")
@@ -59,6 +57,7 @@ class image_folder_publisher(rclpy.node.Node):
         self.get_logger().info(f" Reading images from {self._image_folder}")
 
     def run(self):
+        time.sleep(self._sleep)
         files_in_dir = [f for f in listdir(self._image_folder) if isfile(join(self._image_folder, f))]
         if self._sort_files:
             files_in_dir.sort()
@@ -78,8 +77,8 @@ class image_folder_publisher(rclpy.node.Node):
                                 #ros_msg.header.stamp = self.get_clock().now().to_msg()
                                 self._image_publisher.publish(ros_msg)
                                 self.get_logger().info(f"Published {f}")
-                                cv2.imshow('image', cv_image)
-                                cv2.waitKey(1)
+                                # cv2.imshow('image', cv_image)
+                                # cv2.waitKey(1)
                             else:
                                 self.get_logger().info(f"Invalid image file {f}")
                             time.sleep(1/self._rate)

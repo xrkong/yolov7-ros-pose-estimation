@@ -145,13 +145,7 @@ class YoloV7:
 
 class Yolov7Publisher(rclpy.node.Node):
     def __init__(self):
-        super().__init__('detect_car')
-        self.qos_profile =  QoSProfile(
-            reliability=QoSReliabilityPolicy.BEST_EFFORT,
-            history=QoSHistoryPolicy.KEEP_LAST,
-            depth=1,
-        )
-
+        super().__init__('detect_ped')
         weights_path_des = ParameterDescriptor(description='absolute path to the weights file')
         classs_path_des = ParameterDescriptor(description='absolute path to the classes file for yolo')
         img_topic_des = ParameterDescriptor(description='name of the image topic to listen to')
@@ -202,12 +196,8 @@ class Yolov7Publisher(rclpy.node.Node):
         self.camera_info_sub = self.create_subscription(
             Image, self.img_topic, self.process_img_msg, 10)
 
-        bbox_topic = self.create_publisher(String, '/yolov7/bbox', 10)
         self.detection_publisher = self.create_publisher(
-            msg_type=String,
-            topic="/yolov7/bbox",
-            qos_profile=self.qos_profile
-        )
+            String, "/yolov7/kpt", 10)
         self.get_logger().info('Hello %s!' % "YOLOv7 initialization complete. Ready to start inference")
 
     def process_img_msg(self, img_msg: Image):
@@ -261,19 +251,17 @@ class Yolov7Publisher(rclpy.node.Node):
         if detections is None:
             return
         # publishing
-        detections[0] = rescale_detection(detections[0], (h_orig, w_orig),(w_scaled, h_scaled))
+        detections[0] = rescale_detection(detections[0], (w_orig, h_orig),(w_scaled, h_scaled))
         detection_msg = json.dumps(detections[0].tolist())
         msg = String()
         msg.data = detection_msg
         self.detection_publisher.publish(msg)
 
         # visualizing if required
-        if self.visualization_publisher:
+        if self.visualize:
             im0 = cv2.resize(im0,(w_orig, h_orig))
             cv2.imshow("Pedestrian Detector", im0)
             cv2.waitKey(1) 
-        else:
-            pass
 
 def main():
     rclpy.init()

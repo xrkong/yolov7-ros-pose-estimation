@@ -74,12 +74,6 @@ class YoloV7:
 class Yolov7Publisher(rclpy.node.Node):
     def __init__(self):
         super().__init__('detect_car')
-        self.qos_profile =  QoSProfile(
-            reliability=QoSReliabilityPolicy.BEST_EFFORT,
-            history=QoSHistoryPolicy.KEEP_LAST,
-            depth=1,
-        )
-
         weights_path_des = ParameterDescriptor(description='absolute path to the weights file')
         classs_path_des = ParameterDescriptor(description='absolute path to the classes file for yolo')
         img_topic_des = ParameterDescriptor(description='name of the image topic to listen to')
@@ -129,12 +123,9 @@ class Yolov7Publisher(rclpy.node.Node):
         self.camera_info_sub = self.create_subscription(
             Image, self.img_topic, self.process_img_msg, 10)
 
-        bbox_topic = self.create_publisher(String, '/yolov7/bbox', 10)
+        #bbox_topic = self.create_publisher(String, '/yolov7/bbox', 10)
         self.detection_publisher = self.create_publisher(
-            msg_type=String,
-            topic="/bbox",
-            qos_profile=self.qos_profile
-        )
+            String, "/yolov7/bbox", 10)
         self.get_logger().info('Hello %s!' % "YOLOv7 initialization complete. Ready to start inference")
 
     def process_img_msg(self, img_msg: Image):
@@ -142,8 +133,8 @@ class Yolov7Publisher(rclpy.node.Node):
         np_img_orig = self.bridge.imgmsg_to_cv2(
             img_msg, desired_encoding='bgr8'
         )
-        cv2.imshow("Object Detector Raw", np_img_orig)
-        cv2.waitKey(1)
+        # cv2.imshow("Object Detector Raw", np_img_orig)
+        # cv2.waitKey(1)
         # handle possible different img formats
         if len(np_img_orig.shape) == 2:
             np_img_orig = np.stack([np_img_orig] * 3, axis=2)
