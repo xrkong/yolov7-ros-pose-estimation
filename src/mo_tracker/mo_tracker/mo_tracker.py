@@ -118,6 +118,33 @@ def plot_one_box_kpt(x, im, color=None, label=None, line_thickness=3, kpt_label=
         c1, c2 = (int(x[0]), int(x[1])), (int(x[2]), int(x[3]))
         cv2.rectangle(im, c1, c2, (255,0,0), thickness=tl*1//3, lineType=cv2.LINE_AA)
 
+def save_images(img, save_path):
+    """
+    Saves an image to a specified directory with names incrementally.
+    
+    Parameters:
+    img: The image to be saved.
+    save_path: Directory in which images will be saved.
+    """
+
+    # Check if the directory exists, if not, create it
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
+
+    # Check if the image counter exists
+    if not hasattr(save_images, "counter"):
+        save_images.counter = 1  # it doesn't exist yet, so initialize it
+
+    # Construct the full path for the image
+    img_name = f"{save_images.counter}.jpg"
+    path = os.path.join(save_path, img_name)
+
+    # Save the image
+    cv2.imwrite(path, img)
+
+    # Increment the counter
+    save_images.counter += 1
+
 class TrackerNode(rclpy.node.Node):
     def __init__(self):
         super().__init__('mo_tracker')
@@ -199,6 +226,8 @@ class TrackerNode(rclpy.node.Node):
 
         cv2.imshow("Tracker Output", img)
         cv2.waitKey(1)
+        #save_images(img, './images')
+
 
     def ped_det_callback(self, objects):
         '''
