@@ -110,7 +110,7 @@ class Yolov7Publisher(rclpy.node.Node):
         self.img_size = (self.img_width, self.img_height)
         self.class_labels = parse_classes_file(self.get_parameter('classes_path').get_parameter_value().string_value)
         
-        print("class labels: ", self.class_labels)
+        #print("class labels: ", self.class_labels)
         self.visualization_publisher = self.create_publisher(Image, '/yolov7/visualization', 10)
 
         self.bridge = CvBridge()
@@ -165,7 +165,7 @@ class Yolov7Publisher(rclpy.node.Node):
         self.detection_publisher.publish(msg)
 
         # visualizing if required
-        if self.visualization_publisher:
+        if self.visualize:
             bboxes = [[int(x1), int(y1), int(x2), int(y2)]
                       for x1, y1, x2, y2 in detections[:, :4].tolist()]
             classes = [int(c) for c in detections[:, 5].tolist()]
@@ -174,8 +174,8 @@ class Yolov7Publisher(rclpy.node.Node):
             vis_msg = self.bridge.cv2_to_imgmsg(cv2.resize(vis_img,(w_scaled, h_scaled)))
             cv2.imshow("Object Detector", vis_img)
             cv2.waitKey(1)
-            vis_msg = self.bridge.cv2_to_imgmsg(vis_img)
-            self.visualization_publisher.publish(vis_msg)
+            # vis_msg = self.bridge.cv2_to_imgmsg(vis_img)
+            # self.visualization_publisher.publish(vis_msg)
 
 def main():
     rclpy.init()

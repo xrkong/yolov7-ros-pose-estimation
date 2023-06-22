@@ -189,16 +189,16 @@ class TrackerNode(rclpy.node.Node):
         # [ ] use llm to combine the label
 
     def raw_img_callback(self, image):
-        self.img = CvBridge().imgmsg_to_cv2(image, desired_encoding='passthrough')
+        self.img = CvBridge().imgmsg_to_cv2(image, desired_encoding='bgr8')
 
-        img = self.img.copy()
+        img = self.img
         if len(self.ped_dets): 
             # draw key points 
             # BUG: key points are not matched with ground turth in image
             for i in range(len(self.ped_dets)):
                 plot_one_box_kpt(self.ped_dets[i][0:3], img, kpts=self.ped_dets[i][6:], 
                                  steps=3,orig_shape=img.shape[:2])
-            self.ped_dets = []
+            #self.ped_dets = []
 
         if len(self.obj_dets):
             # draw bbox
@@ -208,7 +208,7 @@ class TrackerNode(rclpy.node.Node):
                       for x1, y1, x2, y2 in car_dets[:, :4].tolist()]
             classes = [int(c) for c in car_dets[:, 5].tolist()]
             img = draw_detections(img, bboxes, classes, self.class_labels)
-            self.obj_dets = []
+            #self.obj_dets = []
 
             # tracking 
             tracks = self.sort_tracker_people.getTrackers()
@@ -240,7 +240,7 @@ class TrackerNode(rclpy.node.Node):
 
     def obj_det_callback(self, objects):
         self.obj_dets = json.loads(objects.data)
-        self.get_logger().info(f'bbox: {len(self.obj_dets)} detected!')
+        #self.get_logger().info(f'bbox: {len(self.obj_dets)} detected!')
         for i in range(len(self.obj_dets)):
             dets_to_sort = np.empty((0,6))
             det = torch.tensor(self.obj_dets[i])
