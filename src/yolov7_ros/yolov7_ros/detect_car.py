@@ -5,6 +5,7 @@ from .visualizer import draw_detections
 
 from typing import Tuple, Union
 
+import os
 import torch
 import cv2
 from torchvision.transforms import ToTensor
@@ -43,6 +44,33 @@ def rescale(ori_shape: Tuple[int, int], boxes: Union[torch.Tensor, np.ndarray],
     boxes[:, [1, 3]] *= yscale
 
     return boxes
+
+def save_images(img, save_path):
+    """
+    Saves an image to a specified directory with names incrementally.
+    
+    Parameters:
+    img: The image to be saved.
+    save_path: Directory in which images will be saved.
+    """
+
+    # Check if the directory exists, if not, create it
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
+
+    # Check if the image counter exists
+    if not hasattr(save_images, "counter"):
+        save_images.counter = 1  # it doesn't exist yet, so initialize it
+
+    # Construct the full path for the image
+    img_name = f"{save_images.counter}.jpg"
+    path = os.path.join(save_path, img_name)
+
+    # Save the image
+    cv2.imwrite(path, img)
+
+    # Increment the counter
+    save_images.counter += 1
 
 class YoloV7:
     def __init__(self, weights, conf_thresh: float = 0.5, iou_thresh: float = 0.45,
@@ -174,6 +202,7 @@ class Yolov7Publisher(rclpy.node.Node):
             vis_msg = self.bridge.cv2_to_imgmsg(cv2.resize(vis_img,(w_scaled, h_scaled)))
             cv2.imshow("Object Detector", vis_img)
             cv2.waitKey(1)
+            save_images(vis_img, './obj_images')
             vis_msg = self.bridge.cv2_to_imgmsg(vis_img)
             self.visualization_publisher.publish(vis_msg)
 

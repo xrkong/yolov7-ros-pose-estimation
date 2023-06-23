@@ -16,6 +16,6 @@ def generate_launch_description():
                 'frame_id': 'camera', 
                 'sleep': 5, 
                 'loop': -1, 
-                'image_folder': '/home/kong/dataset/kitti/data_tracking_image_2/training/image_02/0019/' }]
+                'image_folder': '/home/kong/dataset/kitti/data_tracking_image_2/training/image_02/0007/' }] # 0019 pedestrian, 0005 highway, 007 right
         ),
     ])

@@ -7,6 +7,7 @@ from .visualizer import draw_detections
 
 from typing import Tuple, Union
 import time
+import os
 
 import torch
 import cv2
@@ -62,6 +63,33 @@ def rescale_detection(detections, new_shape : Tuple[int, int],ori_shape: Tuple[i
             det[7::3] *= yscale
 
     return detections
+
+def save_images(img, save_path):
+    """
+    Saves an image to a specified directory with names incrementally.
+    
+    Parameters:
+    img: The image to be saved.
+    save_path: Directory in which images will be saved.
+    """
+
+    # Check if the directory exists, if not, create it
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
+
+    # Check if the image counter exists
+    if not hasattr(save_images, "counter"):
+        save_images.counter = 1  # it doesn't exist yet, so initialize it
+
+    # Construct the full path for the image
+    img_name = f"{save_images.counter}.jpg"
+    path = os.path.join(save_path, img_name)
+
+    # Save the image
+    cv2.imwrite(path, img)
+
+    # Increment the counter
+    save_images.counter += 1
 
 class YoloV7:
     def __init__(self, weights, conf_thresh: float = 0.5, iou_thresh: float = 0.45,
@@ -140,7 +168,7 @@ class YoloV7:
         fps_list.append(total_fps) #append FPS in list
         time_list.append(end_time - start_time) #append time in list
         
-        cv2.putText(im0, str(int(fps)), (7, 70), cv2.FONT_HERSHEY_SIMPLEX, 1, (100, 255, 0), 3, cv2.LINE_AA)
+        #cv2.putText(im0, str(int(fps)), (7, 70), cv2.FONT_HERSHEY_SIMPLEX, 1, (100, 255, 0), 3, cv2.LINE_AA)
         return detections_pdst, im0
 
 class Yolov7Publisher(rclpy.node.Node):
@@ -262,6 +290,7 @@ class Yolov7Publisher(rclpy.node.Node):
             im0 = cv2.resize(im0,(w_orig, h_orig))
             cv2.imshow("Pedestrian Detector", im0)
             cv2.waitKey(1) 
+            save_images(im0, './pose_images')
 
 def main():
     rclpy.init()

@@ -77,8 +77,8 @@ class image_folder_publisher(rclpy.node.Node):
                                 #ros_msg.header.stamp = self.get_clock().now().to_msg()
                                 self._image_publisher.publish(ros_msg)
                                 self.get_logger().info(f"Published {f}")
-                                # cv2.imshow('image', cv_image)
-                                # cv2.waitKey(1)
+                                cv2.imshow('image', cv_image)
+                                cv2.waitKey(1)
                             else:
                                 self.get_logger().info(f"Invalid image file {f}")
                             time.sleep(1/self._rate)
