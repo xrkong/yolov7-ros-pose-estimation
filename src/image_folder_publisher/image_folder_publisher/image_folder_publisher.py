@@ -73,8 +73,8 @@ class image_folder_publisher(rclpy.node.Node):
                                 ros_msg = Image()
                                 ros_msg = self._cv_bridge.cv2_to_imgmsg(cv_image, "bgr8")
                                 #print(ros_msg.width, ros_msg.height, ros_msg.encoding, ros_msg.step)
-                                #ros_msg.header.frame_id = file_name # for kitti dataset, image name is the frame id
-                                #ros_msg.header.stamp = self.get_clock().now().to_msg()
+                                ros_msg.header.frame_id = file_name # for kitti dataset, image name is the frame id
+                                ros_msg.header.stamp = self.get_clock().now().to_msg()
                                 self._image_publisher.publish(ros_msg)
                                 self.get_logger().info(f"Published {f}")
                                 cv2.imshow('image', cv_image)

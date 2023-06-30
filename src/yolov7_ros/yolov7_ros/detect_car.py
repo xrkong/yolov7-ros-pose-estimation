@@ -16,6 +16,7 @@ from rcl_interfaces.msg import ParameterDescriptor
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy
 
 import json
+import csv 
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
 from std_msgs.msg import String
@@ -27,6 +28,18 @@ def parse_classes_file(path):
             line = line.replace("\n", "")
             classes.append(line)
     return classes
+
+def save_string_to_csv(file_path, data):
+    file_exists = os.path.exists(file_path)
+    with open(file_path, 'a', newline='') as csvfile:
+        writer = csv.writer(csvfile)
+        
+        # Write header if the file doesn't exist
+        if not file_exists:
+            writer.writerow(['objects'])
+        
+        # Write the string to the CSV file
+        writer.writerow([data])
 
 def rescale(ori_shape: Tuple[int, int], boxes: Union[torch.Tensor, np.ndarray],
             target_shape: Tuple[int, int]):
@@ -158,6 +171,7 @@ class Yolov7Publisher(rclpy.node.Node):
 
     def process_img_msg(self, img_msg: Image):
         """ callback function for publisher """
+        img_id = img_msg.header.frame_id
         np_img_orig = self.bridge.imgmsg_to_cv2(
             img_msg, desired_encoding='bgr8'
         )
@@ -187,7 +201,9 @@ class Yolov7Publisher(rclpy.node.Node):
         detections[:, :4] = detections[:, :4].round()
 
         # publishing
+        print("objects: ", detections.tolist())
         detection_msg = json.dumps(detections.tolist())
+        save_string_to_csv('/home/kong/my_ws/llm_chatgpt/data/'+img_id, detections.tolist())
         msg = String()
         msg.data = detection_msg
         self.detection_publisher.publish(msg)
@@ -202,7 +218,7 @@ class Yolov7Publisher(rclpy.node.Node):
             vis_msg = self.bridge.cv2_to_imgmsg(cv2.resize(vis_img,(w_scaled, h_scaled)))
             cv2.imshow("Object Detector", vis_img)
             cv2.waitKey(1)
-            save_images(vis_img, './obj_images')
+            #save_images(vis_img, './obj_images')
             vis_msg = self.bridge.cv2_to_imgmsg(vis_img)
             self.visualization_publisher.publish(vis_msg)
 
