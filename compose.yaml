@@ -1,0 +1,27 @@
+version: '2'
+
+services:
+  detector:
+    image: ${IMAGE}:${TAG} 
+    container_name: detector
+    #command: ros2 launch yolov7_ros detector_launch.py
+    command: tail -F anything
+    entrypoint: ./ros_entrypoint.sh
+    volumes:
+      - type: bind
+        source: .
+        target: /ws/yolov7-ros-pose-estimation # nn_models  yolov7-ros-pose-estimation
+      - type: bind
+        source: ../nn_models
+        target: /ws/nn_models
+
+    deploy: # for cuda
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    environment: # for 
+      - ROS_DOMAIN_ID=${ROS_DOMAIN_ID}
+    network_mode: host

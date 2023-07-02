@@ -5,6 +5,7 @@ from .visualizer import draw_detections
 
 from typing import Tuple, Union
 
+
 import torch
 import cv2
 from torchvision.transforms import ToTensor
@@ -18,6 +19,8 @@ import json
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
 from std_msgs.msg import String
+import warnings
+warnings.filterwarnings("ignore") 
 
 def parse_classes_file(path):
     classes = []
@@ -93,7 +96,7 @@ class Yolov7Publisher(rclpy.node.Node):
         self.declare_parameter('queue_size', 10, queue_size_des)
         self.declare_parameter('img_width', 1280, img_width_des)
         self.declare_parameter('img_height', 320, img_height_des)
-        self.declare_parameter('visualize', True, visualize_des)
+        self.declare_parameter('visualize', False, visualize_des)
         self.declare_parameter('device', 'cuda', device_des)
         
         self.weights = self.get_parameter('weights_path').get_parameter_value().string_value
@@ -172,10 +175,10 @@ class Yolov7Publisher(rclpy.node.Node):
             vis_img = draw_detections(np_img_orig, bboxes, classes,
                                       self.class_labels)
             vis_msg = self.bridge.cv2_to_imgmsg(cv2.resize(vis_img,(w_scaled, h_scaled)))
-            cv2.imshow("Object Detector", vis_img)
-            cv2.waitKey(1)
-            # vis_msg = self.bridge.cv2_to_imgmsg(vis_img)
-            # self.visualization_publisher.publish(vis_msg)
+            # cv2.imshow("Object Detector", vis_img)
+            # cv2.waitKey(1)
+            vis_msg = self.bridge.cv2_to_imgmsg(vis_img)
+            self.visualization_publisher.publish(vis_msg)
 
 def main():
     rclpy.init()

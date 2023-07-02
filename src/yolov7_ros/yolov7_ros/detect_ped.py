@@ -21,6 +21,8 @@ import json
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
 from std_msgs.msg import String
+import warnings
+warnings.filterwarnings("ignore") 
 
 def parse_classes_file(path):
     classes = []
@@ -125,7 +127,7 @@ class Yolov7Publisher(rclpy.node.Node):
         self.declare_parameter('queue_size', 10, queue_size_des)
         self.declare_parameter('img_width', 1280, img_width_des)
         self.declare_parameter('img_height', 320, img_height_des)
-        self.declare_parameter('visualize', True, visualize_des)
+        self.declare_parameter('visualize', False, visualize_des)
         self.declare_parameter('device', 'cuda', device_des)
         
         self.weights = self.get_parameter('weights_path').get_parameter_value().string_value
@@ -212,8 +214,8 @@ class Yolov7Publisher(rclpy.node.Node):
             cv2.putText(np_img_orig, str(int(fps)), (7, 70), cv2.FONT_HERSHEY_SIMPLEX, 1, (100, 255, 0), 3, cv2.LINE_AA)
             im0 = cv2.resize(np_img_orig,(w_orig, h_orig))
         
-            cv2.imshow("Pedestrian Detector", im0)
-            cv2.waitKey(1) 
+            #cv2.imshow("Pedestrian Detector", im0)
+            #cv2.waitKey(1) 
             
 
 def main():
