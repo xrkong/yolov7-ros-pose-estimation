@@ -223,7 +223,7 @@ class Yolov7Publisher(rclpy.node.Node):
         self.img_size = (self.img_width, self.img_height)
         self.class_labels = parse_classes_file(self.get_parameter('classes_path').get_parameter_value().string_value)
         
-        print("class labels: ", self.class_labels)
+        #print("class labels: ", self.class_labels)
 
         self.visualization_publisher = self.create_publisher(Image, '/yolov7/visualization', 10)
 
@@ -294,7 +294,7 @@ class Yolov7Publisher(rclpy.node.Node):
             return
         # publishing
         detections[0] = rescale_detection(detections[0], (w_orig, h_orig),(w_scaled, h_scaled))
-        print("pedestrians: ",detections[0].tolist())
+        #print("pedestrians: ",detections[0].tolist())
         save_string_to_csv('/home/kong/my_ws/llm_chatgpt/data/'+img_id, detections[0].tolist())
 
         detection_msg = json.dumps(detections[0].tolist())

@@ -29,12 +29,12 @@ def generate_launch_description():
                 'weights_path': '/home/kong/my_ws/nn_models/yolov7/yolov7.pt',
                 'classes_path': '/home/kong/my_ws/yolov7-ros-pose-estimation/src/yolov7_ros/class_labels/coco.txt',
                 'img_topic': '/image_raw',
-                'conf_thresh': 0.45,
+                'conf_thresh': 0.75,
                 'iou_thresh': 0.45,
                 'queue_size': 10,
                 'img_width': 1280,
                 'img_height': 320,
-                'visualize': True,
+                'visualize': False,
                 'device': 'cuda'} ]
         ),
         Node(
@@ -47,12 +47,12 @@ def generate_launch_description():
                 'weights_path': '/home/kong/my_ws/nn_models/yolov7/yolov7-w6-pose.pt',
                 'classes_path': '/home/kong/my_ws/yolov7-ros-pose-estimation/src/yolov7_ros/class_labels/coco.txt',
                 'img_topic': '/image_raw',
-                'conf_thresh': 0.45,
+                'conf_thresh': 0.60,
                 'iou_thresh': 0.45,
                 'queue_size': 10,
                 'img_width': 1280,
                 'img_height': 320,
-                'visualize': True,
+                'visualize': False,
                 'device': 'cuda'} ]
         ),
         Node(
@@ -67,7 +67,7 @@ def generate_launch_description():
                 "bbox_topic": "/yolov7/bbox",
                 "out_topic": "action_est",
                 "queue_size": 10,
-                "visualize": True,
+                "visualize": False,
                 "classes_path": "/home/kong/my_ws/yolov7-ros-pose-estimation/src/yolov7_ros/class_labels/coco.txt"}]
         ),
     ])

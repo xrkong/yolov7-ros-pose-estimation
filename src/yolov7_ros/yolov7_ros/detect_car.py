@@ -151,7 +151,7 @@ class Yolov7Publisher(rclpy.node.Node):
         self.img_size = (self.img_width, self.img_height)
         self.class_labels = parse_classes_file(self.get_parameter('classes_path').get_parameter_value().string_value)
         
-        print("class labels: ", self.class_labels)
+        #print("class labels: ", self.class_labels)
         self.visualization_publisher = self.create_publisher(Image, '/yolov7/visualization', 10)
 
         self.bridge = CvBridge()
@@ -201,7 +201,7 @@ class Yolov7Publisher(rclpy.node.Node):
         detections[:, :4] = detections[:, :4].round()
 
         # publishing
-        print("objects: ", detections.tolist())
+        #print("objects: ", detections.tolist())
         detection_msg = json.dumps(detections.tolist())
         save_string_to_csv('/home/kong/my_ws/llm_chatgpt/data/'+img_id, detections.tolist())
         msg = String()

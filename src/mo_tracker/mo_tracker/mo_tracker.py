@@ -258,30 +258,3 @@ def main(args=None):
 
 if __name__ == '__main__':
     main()
-    # rospy.init_node('mo_tracker')
-
-    # ns = rospy.get_name() + "/"
-
-    # img_topic = rospy.get_param(ns + "img_topic")
-    # pose_topic = rospy.get_param(ns + "pose_topic")
-    # bbox_topic = rospy.get_param(ns + "bbox_topic")
-    # out_topic = rospy.get_param(ns + "out_topic")
-    # queue_size = rospy.get_param(ns + "queue_size")
-    # visualize = rospy.get_param(ns + "visualize")
-    # classes_path = rospy.get_param(ns + "classes_path")
-
-    # if classes_path: 
-    #     if not os.path.isfile(classes_path):
-    #         raise FileExistsError(f"Classes file not found ({classes_path}).")
-    #     classes = parse_classes_file(classes_path)
-
-    # publisher = TrackerNode(
-    #     img_topic = img_topic, 
-    #     pose_topic = pose_topic, 
-    #     bbox_topic = bbox_topic,
-    #     queue_size = queue_size, 
-    #     visualize = visualize,
-    #     out_topic = out_topic,
-    #     class_labels=classes)
-
-    # rospy.spin()
