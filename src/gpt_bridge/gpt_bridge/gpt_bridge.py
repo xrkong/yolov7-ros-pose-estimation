@@ -61,18 +61,26 @@ class GptBridgeNode(rclpy.node.Node):
         kpt = {"left shoulder":5,  "left elbow":7,  "left wrist":9,
             "right shoulder":6, "right elbow":8, "right wrist":10}
         for i in range(len(self.ped_dets)):
-            label = self.class_labels[int(self.obj_dets[i][5])]
-            id = int(self.obj_dets[i][5])
-            conf = self.obj_dets[i][4]
-            xyxy = self.obj_dets[i][0:4]
-            left_shoulder = [a-b for a,b in zip(self.ped_dets[i][6+kpt["left shoulder"]*3:], xyxy[0:2])]
-            left_elbow = [a-b for a,b in zip(self.ped_dets[i][6+kpt["left elbow"]*3:], xyxy[0:2])]
-            left_wrist = [a-b for a,b in zip(self.ped_dets[i][6+kpt["left wrist"]*3:], xyxy[0:2])]
-            right_shoulder = [a-b for a,b in zip(self.ped_dets[i][6+kpt["right shoulder"]*3:], xyxy[0:2])]
-            right_elbow = [a-b for a,b in zip(self.ped_dets[i][6+kpt["right elbow"]*3:], xyxy[0:2])]
-            right_wrist = [a-b for a,b in zip(self.ped_dets[i][6+kpt["right wrist"]*3:], xyxy[0:2])]
+            #label = self.class_labels[int(self.obj_dets[i][5])]
+            id = int(self.ped_dets[i][5])
+            conf = self.ped_dets[i][4]
+            centre = [int((self.ped_dets[i][0]+self.ped_dets[i][2])/2), int((self.ped_dets[i][1]+self.ped_dets[i][3])/2)]
+            #xyxy = self.obj_dets[i][0:4]
+            x0 = self.ped_dets[i][0]
+            y1 = self.ped_dets[i][3] # transform Right Down Coodinate to Rigth Up Coordinate
+            left_shoulder = [int(self.ped_dets[i][6+kpt["left shoulder"]*3]-x0), int(y1-self.ped_dets[i][6+kpt["left shoulder"]*3+1])]
+            left_elbow = [int(self.ped_dets[i][6+kpt["left elbow"]*3]-x0), int(y1-self.ped_dets[i][6+kpt["left elbow"]*3+1])]
+            left_wrist = [int(self.ped_dets[i][6+kpt["left wrist"]*3]-x0), int(y1-self.ped_dets[i][6+kpt["left wrist"]*3+1])]
+            right_shoulder = [int(self.ped_dets[i][6+kpt["right shoulder"]*3]-x0), int(y1-self.ped_dets[i][6+kpt["right shoulder"]*3+1])]
+            right_elbow = [int(self.ped_dets[i][6+kpt["right elbow"]*3]-x0), int(y1-self.ped_dets[i][6+kpt["right elbow"]*3+1])]
+            right_wrist = [int(self.ped_dets[i][6+kpt["right wrist"]*3]-x0), int(y1-self.ped_dets[i][6+kpt["right wrist"]*3+1])]
+            limbes = [[int(value - x0) for value in self.ped_dets[i][6::3]],
+                [int(y1 - value) for value in self.ped_dets[i][7::3] ]]
             # overlapping objects
-            print('person', id, "{:.0f}%".format(conf*100), left_shoulder, left_elbow, left_wrist)
+            print([id, 'person', self.ped_dets[i][0:4], "{:.3f}".format(conf), 
+                  left_shoulder, left_elbow, left_wrist,
+                  right_shoulder, right_elbow, right_wrist, 'None', 0])
+            print(limbes)
 
     def obj_det_callback(self, msg):
         '''output: [[label, xyxy,conf,],...]'''
@@ -83,7 +91,7 @@ class GptBridgeNode(rclpy.node.Node):
                 label = self.class_labels[int(self.obj_dets[i][5])]
                 xyxy = self.obj_dets[i][0:4] # TODO: combine with lane detection to [left],[middle],[right]
                 conf = self.obj_dets[i][4]
-            print(label, "{:.0f}%".format(conf*100))
+            print(label, "{:.3f}".format(conf))
   
 
 def main(args=None):
