@@ -21,6 +21,15 @@ def parse_classes_file(path):
             classes.append(line)
     return classes
 
+def check_overlap(box1, box2): # box format: x1y1x2y2
+    if box1[0] > box2[2] or box1[2] < box2[0] or box1[1] > box2[3] or box1[3] < box2[1]:
+        return (False,-1)
+    else:
+        x_overlap = max(0, min(box1[2], box2[2]) - max(box1[0], box2[0]))
+        y_overlap = max(0, min(box1[3], box2[3]) - max(box1[1], box2[1]))
+        overlap_area = int(x_overlap * y_overlap)
+        return (True, overlap_area)
+
 class GptBridgeNode(rclpy.node.Node):
     def __init__(self):
         super().__init__('gpt_bridge')
@@ -61,11 +70,10 @@ class GptBridgeNode(rclpy.node.Node):
         kpt = {"left shoulder":5,  "left elbow":7,  "left wrist":9,
             "right shoulder":6, "right elbow":8, "right wrist":10}
         for i in range(len(self.ped_dets)):
-            #label = self.class_labels[int(self.obj_dets[i][5])]
             id = int(self.ped_dets[i][5])
             conf = self.ped_dets[i][4]
             centre = [int((self.ped_dets[i][0]+self.ped_dets[i][2])/2), int((self.ped_dets[i][1]+self.ped_dets[i][3])/2)]
-            #xyxy = self.obj_dets[i][0:4]
+            xyxy_ped = [int(x) for x in self.ped_dets[i][0:4]]
             x0 = self.ped_dets[i][0]
             y1 = self.ped_dets[i][3] # transform Right Down Coodinate to Rigth Up Coordinate
             left_shoulder = [int(self.ped_dets[i][6+kpt["left shoulder"]*3]-x0), int(y1-self.ped_dets[i][6+kpt["left shoulder"]*3+1])]
@@ -76,10 +84,25 @@ class GptBridgeNode(rclpy.node.Node):
             right_wrist = [int(self.ped_dets[i][6+kpt["right wrist"]*3]-x0), int(y1-self.ped_dets[i][6+kpt["right wrist"]*3+1])]
             limbes = [[int(value - x0) for value in self.ped_dets[i][6::3]],
                 [int(y1 - value) for value in self.ped_dets[i][7::3] ]]
-            # overlapping objects
-            print([id, 'person', self.ped_dets[i][0:4], "{:.3f}".format(conf), 
+            
+            # calaulate overlapping objects
+            op_flg, op_area, op_conf, op_label = (False, 0, 0, 'None')
+            if self.obj_dets is not None:
+                for j in range(len(self.obj_dets)):
+                    xyxy_obj = [int(x) for x in self.obj_dets[j][0:4]]
+                    lb = self.class_labels[int(self.obj_dets[j][5])]
+                    if lb == 'person':
+                        continue
+
+                    if check_overlap(xyxy_ped, xyxy_obj)[0] and check_overlap(xyxy_ped, xyxy_obj)[1] > op_area:
+                        op_flg = True
+                        op_area = check_overlap(xyxy_ped, xyxy_obj)[1]
+                        op_label = self.class_labels[int(self.obj_dets[j][5])]
+                        op_conf = self.obj_dets[j][4]
+
+            print([id, 'person', xyxy_ped, "{:.3f}".format(conf), 
                   left_shoulder, left_elbow, left_wrist,
-                  right_shoulder, right_elbow, right_wrist, 'None', 0])
+                  right_shoulder, right_elbow, right_wrist, op_label, op_flg, op_area, "{:.3f}".format(op_conf)])
             print(limbes)
 
     def obj_det_callback(self, msg):
@@ -91,7 +114,7 @@ class GptBridgeNode(rclpy.node.Node):
                 label = self.class_labels[int(self.obj_dets[i][5])]
                 xyxy = self.obj_dets[i][0:4] # TODO: combine with lane detection to [left],[middle],[right]
                 conf = self.obj_dets[i][4]
-            print(label, "{:.3f}".format(conf))
+            #print(label, "{:.3f}".format(conf))
   
 
 def main(args=None):
