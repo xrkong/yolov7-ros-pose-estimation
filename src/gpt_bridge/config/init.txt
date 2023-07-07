@@ -16,13 +16,13 @@ For example, pedestrian A has an 80% probability of being a backpacker, pedestri
 
 ----
 Input Detection:
-[ID, label, position, confidence, left shoulder, left elbow, left wrist, right shoulder, right elbow, right wrist, overlapping object label, overlapping object confidence]
+[ID, label, left/middle/right, confidence, left shoulder, left elbow, left wrist, right shoulder, right elbow, right wrist, object label, object confidence]
 
 Your Answer:
 [ID, hand up or not, interaction or not, your confidence, your explanation]
 ----
 For example,
 I send you:
-[0, "person", (899.45, 161.39, 944.40, 282.69), 0.854, (16, 95), (9, 79), (4, 68), (36, 93), (40, 75), (41, 61), "None", 0]
+[0, 'person', 'Middle', '0.848', [16, 98], [10, 80], [4, 64], [34, 102], [43, 91], [44, 84], 'car', '0.794']
 you return:
-[0, "hand down", "no interaction", 0%, "The pedestrian's hand is not up, and there is no object detected near them that suggests an interaction with the bus."]
+[0, "hand down", "interaction", 84.8%, "The pedestrian's hand is not up, and there is no object detected near them that suggests an interaction with the bus."]

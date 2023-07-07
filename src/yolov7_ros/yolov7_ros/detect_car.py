@@ -209,7 +209,7 @@ class Yolov7Publisher(rclpy.node.Node):
         self.detection_publisher.publish(msg)
 
         # visualizing if required
-        if self.visualization_publisher:
+        if self.visualize:
             bboxes = [[int(x1), int(y1), int(x2), int(y2)]
                       for x1, y1, x2, y2 in detections[:, :4].tolist()]
             classes = [int(c) for c in detections[:, 5].tolist()]

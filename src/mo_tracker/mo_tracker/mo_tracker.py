@@ -32,6 +32,17 @@ def parse_classes_file(path):
             classes.append(line)
     return classes
 
+def check_overlap(box1, box2): # box format: x1y1x2y2
+    if box1[0] > box2[2] or box1[2] < box2[0] or box1[1] > box2[3] or box1[3] < box2[1]:
+        combox = [0,0,0,0]
+        return (False,-1, [0,0,0,0])
+    else:
+        x_overlap = max(0, min(box1[2], box2[2]) - max(box1[0], box2[0]))
+        y_overlap = max(0, min(box1[3], box2[3]) - max(box1[1], box2[1]))
+        overlap_area = int(x_overlap * y_overlap)
+        combox = [min(box1[0], box2[0]), min(box1[1], box2[1]), max(box1[2], box2[2]), max(box1[3], box2[3])]
+        return (True, overlap_area, combox)
+
 def scale_coords(img1_shape, coords, img0_shape, ratio_pad=None):
     # Rescale coords (xyxy) from img1_shape to img0_shape
     if ratio_pad is None:  # calculate from img0_shape
@@ -98,7 +109,7 @@ def plot_skeleton_kpts(im, kpts, steps, orig_shape=None):
         cv2.line(im, pos1, pos2, (int(r), int(g), int(b)), thickness=2)
         #cv2.putText(im, f"{sk_id}", ((pos1[0] + pos2[0])//2,(pos1[1] + pos2[1])//2) , cv2.FONT_HERSHEY_SIMPLEX, 1, (100, 255, 0), 3, cv2.LINE_AA)
         
-def plot_one_box_kpt(x, im, color=None, label=None, line_thickness=3, kpt_label=True, kpts=None, steps=3, orig_shape=None):
+def plot_one_box_kpt(x, im, color=None, label=None, line_thickness=1, kpt_label=True, kpts=None, steps=3, orig_shape=None):
     # Plots one bounding box on image 'im' using OpenCV
     assert im.data.contiguous, 'Image not contiguous. Apply np.ascontiguousarray(im) to plot_on_box() input image.'
 
@@ -176,25 +187,25 @@ class TrackerNode(rclpy.node.Node):
         self.track = []
         self.ped_dets = []
         self.obj_dets = []
+        self.combox_list = []
         self.sort_tracker_people = Sort(max_age=5,min_hits=2,iou_threshold=0.2) 
 
         self.img_subscriber = self.create_subscription(
-            Image, self.img_topic, self.raw_img_callback, 10)
+            Image, self.img_topic, self.raw_img_callback, 1)
         self.pose_subscriber = self.create_subscription(
-            String, self.pose_topic, self.ped_det_callback, 10)
+            String, self.pose_topic, self.ped_det_callback, 1)
         self.bbox_subscriber = self.create_subscription(
-            String, self.bbox_topic, self.obj_det_callback, 10)
-        bbox_topic = self.create_publisher(String, '/limbs_track', 10)
-        # [ ] fuse bounding box when they are close to each other 
-        # [ ] use llm to combine the label
+            String, self.bbox_topic, self.obj_det_callback, 1)
+        bbox_topic = self.create_publisher(String, '/limbs_track', 1)
 
     def raw_img_callback(self, image):
         self.img = CvBridge().imgmsg_to_cv2(image, desired_encoding='passthrough')
-
-        img = self.img.copy()
+        height, width, channels = self.img.shape
+        white_image = np.full((height, width, 3), (255, 255, 255), dtype=np.uint8)
+        img = white_image #self.img.copy()
         if len(self.ped_dets): 
             # draw key points 
-            # BUG: key points are not matched with ground turth in image
+            # BUG: key points are not matched with ground turth in image, need to sync
             for i in range(len(self.ped_dets)):
                 plot_one_box_kpt(self.ped_dets[i][0:3], img, kpts=self.ped_dets[i][6:], 
                                  steps=3,orig_shape=img.shape[:2])
@@ -210,19 +221,32 @@ class TrackerNode(rclpy.node.Node):
             img = draw_detections(img, bboxes, classes, self.class_labels)
             self.obj_dets = []
 
-            # tracking 
-            tracks = self.sort_tracker_people.getTrackers()
-            if len(tracks)>0:
-                track_color = self.sort_tracker_people.color_list
-                for t, track in enumerate(tracks):
-                    #track_color = track_color[t]
-                    [cv2.line(img, (int(track.centroidarr[i][0]),
-                                int(track.centroidarr[i][1])), 
-                                (int(track.centroidarr[i+1][0]),
-                                int(track.centroidarr[i+1][1])),
-                                track_color[t], thickness=3) 
-                                for i,_ in  enumerate(track.centroidarr) 
-                                    if i < len(track.centroidarr)-1 ] 
+        #     # tracking 
+        #     tracks = self.sort_tracker_people.getTrackers()
+        #     if len(tracks)>0:
+        #         track_color = self.sort_tracker_people.color_list
+        #         for t, track in enumerate(tracks):
+        #             #track_color = track_color[t]
+        #             [cv2.line(img, (int(track.centroidarr[i][0]),
+        #                         int(track.centroidarr[i][1])), 
+        #                         (int(track.centroidarr[i+1][0]),
+        #                         int(track.centroidarr[i+1][1])),
+        #                         track_color[t], thickness=3) 
+        #                         for i,_ in  enumerate(track.centroidarr) 
+        #                             if i < len(track.centroidarr)-1 ] 
+        
+        if len(self.combox_list):
+            for i in range(len(self.combox_list)):
+                x1, y1, x2, y2 = self.combox_list[i][0]
+                #color = [random.randint(0, 255) for _ in range(3)]
+                # img = cv2.rectangle(
+                #     img, (int(x1), int(y1)), (int(x2), int(y2)), color, 3
+                # )
+                cropped_image = white_image[max(y1-20,0):min(y2+20,height), max(x1-20,0):min(x2+20,width)]
+                file_name = "/home/kong/tmp/images/bridge/"+image.header.frame_id+"_"+str(i)
+                cv2.imwrite(file_name+'.jpg', cropped_image)
+                with open(file_name+'.txt', 'x') as file:
+                    file.write(str(self.combox_list[i][1])+ '\n'+str(self.combox_list[i][2]) )          
 
         cv2.imshow("Tracker Output", img)
         cv2.waitKey(1)
@@ -234,9 +258,60 @@ class TrackerNode(rclpy.node.Node):
         Use kpt to track and publish the result, 
         Action estimation Node subscribes to the results and estimates action 
         '''
-        global limbs
         self.ped_dets = json.loads(objects.data)
-        output = []
+        if len(self.ped_dets) <= 0: return
+
+        kpt = {"left shoulder":5,  "left elbow":7,  "left wrist":9,
+            "right shoulder":6, "right elbow":8, "right wrist":10}
+        self.combox_list = []
+        for i in range(len(self.ped_dets)):
+            id = int(self.ped_dets[i][5])
+            conf = self.ped_dets[i][4]
+            centre = [int((self.ped_dets[i][0]+self.ped_dets[i][2])/2), int((self.ped_dets[i][1]+self.ped_dets[i][3])/2)]
+            xyxy_ped = [int(x) for x in self.ped_dets[i][0:4]]
+            x0 = self.ped_dets[i][0]
+            y1 = self.ped_dets[i][3] # transform Right Down Coodinate to Rigth Up Coordinate
+            left_shoulder = [int(self.ped_dets[i][6+kpt["left shoulder"]*3]-x0), int(y1-self.ped_dets[i][6+kpt["left shoulder"]*3+1])]
+            left_elbow = [int(self.ped_dets[i][6+kpt["left elbow"]*3]-x0), int(y1-self.ped_dets[i][6+kpt["left elbow"]*3+1])]
+            left_wrist = [int(self.ped_dets[i][6+kpt["left wrist"]*3]-x0), int(y1-self.ped_dets[i][6+kpt["left wrist"]*3+1])]
+            right_shoulder = [int(self.ped_dets[i][6+kpt["right shoulder"]*3]-x0), int(y1-self.ped_dets[i][6+kpt["right shoulder"]*3+1])]
+            right_elbow = [int(self.ped_dets[i][6+kpt["right elbow"]*3]-x0), int(y1-self.ped_dets[i][6+kpt["right elbow"]*3+1])]
+            right_wrist = [int(self.ped_dets[i][6+kpt["right wrist"]*3]-x0), int(y1-self.ped_dets[i][6+kpt["right wrist"]*3+1])]
+            limbs = [[int(value - x0) for value in self.ped_dets[i][6::3]],
+                [int(y1 - value) for value in self.ped_dets[i][7::3] ]]
+            
+            # calaulate one overlapping object with people
+            op_flg, op_area, op_conf, op_label, op_combox = (False, 0, 0, 'None', [0,0,0,0])
+            if self.obj_dets is not None:
+                for j in range(len(self.obj_dets)):
+                    xyxy_obj = [int(x) for x in self.obj_dets[j][0:4]]
+                    lb = self.class_labels[int(self.obj_dets[j][5])]
+                    if lb == 'person':
+                        continue
+                        
+                    op_flg, tmp_area, op_combox = check_overlap(xyxy_ped, xyxy_obj)
+                    if op_flg and tmp_area > op_area:
+                        op_flg = True
+                        op_label = self.class_labels[int(self.obj_dets[j][5])]
+                        op_conf = self.obj_dets[j][4]
+                        op_area = tmp_area 
+            
+            height, width, channels = self.img.shape
+
+            ped_position = 'Middle'
+            if (xyxy_ped[0]+xyxy_ped[2])//2 < width//3:
+                ped_position = 'Left' 
+            elif (xyxy_ped[0]+xyxy_ped[2])//2 > 2*width//3:
+                ped_position = 'Right'            
+
+            prompt = [id, 'person', xyxy_ped, ped_position, "{:.3f}".format(conf), 
+                  left_shoulder, left_elbow, left_wrist,
+                  right_shoulder, right_elbow, right_wrist, op_label, op_flg, op_area, "{:.3f}".format(op_conf), op_combox]
+            # print(prompt)
+            # print(limbs)
+
+            if op_flg == True:
+                self.combox_list.append([op_combox, prompt, limbs])
 
     def obj_det_callback(self, objects):
         self.obj_dets = json.loads(objects.data)

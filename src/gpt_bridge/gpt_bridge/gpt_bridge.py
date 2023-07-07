@@ -23,12 +23,14 @@ def parse_classes_file(path):
 
 def check_overlap(box1, box2): # box format: x1y1x2y2
     if box1[0] > box2[2] or box1[2] < box2[0] or box1[1] > box2[3] or box1[3] < box2[1]:
-        return (False,-1)
+        combox = [0,0,0,0]
+        return (False,-1, )
     else:
         x_overlap = max(0, min(box1[2], box2[2]) - max(box1[0], box2[0]))
         y_overlap = max(0, min(box1[3], box2[3]) - max(box1[1], box2[1]))
         overlap_area = int(x_overlap * y_overlap)
-        return (True, overlap_area)
+        combox = [min(box1[0], box2[0]), min(box1[1], box2[1]), max(box1[2], box2[2]), max(box1[3], box2[3])]
+        return (True, overlap_area, combox)
 
 class GptBridgeNode(rclpy.node.Node):
     def __init__(self):
@@ -104,6 +106,7 @@ class GptBridgeNode(rclpy.node.Node):
                   left_shoulder, left_elbow, left_wrist,
                   right_shoulder, right_elbow, right_wrist, op_label, op_flg, op_area, "{:.3f}".format(op_conf)])
             print(limbes)
+            # TODO: link images and results by bbox
 
     def obj_det_callback(self, msg):
         '''output: [[label, xyxy,conf,],...]'''
