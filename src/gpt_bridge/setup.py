@@ -23,8 +23,8 @@ setup(
     license='TODO: License declaration',
     tests_require=['pytest'],
     entry_points={
-        'console_scripts': [
-            'gpt_bridge = gpt_bridge.gpt_bridge:main'
-        ],
-    },
+    'console_scripts': [
+        'gpt_bridge = gpt_bridge.gpt_bridge:main',
+    ],
+}
 )

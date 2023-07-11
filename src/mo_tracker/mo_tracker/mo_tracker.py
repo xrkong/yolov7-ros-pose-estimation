@@ -304,9 +304,9 @@ class TrackerNode(rclpy.node.Node):
             elif (xyxy_ped[0]+xyxy_ped[2])//2 > 2*width//3:
                 ped_position = 'Right'            
 
-            prompt = [id, 'person', xyxy_ped, ped_position, "{:.3f}".format(conf), 
+            prompt = [id, 'person', xyxy_ped, ped_position, round(conf, 2), 
                   left_shoulder, left_elbow, left_wrist,
-                  right_shoulder, right_elbow, right_wrist, op_label, op_flg, op_area, "{:.3f}".format(op_conf), op_combox]
+                  right_shoulder, right_elbow, right_wrist, op_label, op_flg, op_area, round(op_conf,2), op_combox]
             # print(prompt)
             # print(limbs)
 
