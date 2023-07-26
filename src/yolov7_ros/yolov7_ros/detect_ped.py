@@ -295,7 +295,7 @@ class Yolov7Publisher(rclpy.node.Node):
         # publishing
         detections[0] = rescale_detection(detections[0], (w_orig, h_orig),(w_scaled, h_scaled))
         #print("pedestrians: ",detections[0].tolist())
-        save_string_to_csv('/home/kong/my_ws/llm_chatgpt/data/'+img_id, detections[0].tolist())
+        #save_string_to_csv('/home/kong/my_ws/llm_chatgpt/data/'+img_id, detections[0].tolist())
 
         detection_msg = json.dumps(detections[0].tolist())
         msg = String()

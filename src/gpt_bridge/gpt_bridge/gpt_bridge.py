@@ -12,7 +12,7 @@ class GptNode(Node):
         self.publisher_ = self.create_publisher(String, 'gpt_response', 10)
         self.subscription = self.create_subscription(
             String,
-            'gpt_request',
+            'prompt',
             self.listener_callback,
             10)
         self.subscription  # prevent unused variable warning
@@ -22,17 +22,17 @@ class GptNode(Node):
         self.get_logger().info('I heard: "%s"' % prompt)
 
         # Call GPT API
-        response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {"role": "system", "content": prompt}
-        ]
-        )
+        # response = openai.ChatCompletion.create(
+        # model="gpt-3.5-turbo",
+        # messages=[
+        #     {"role": "system", "content": prompt}
+        # ]
+        # )
 
-        res_msg = String()
-        res_msg.data = response['choices'][0]['message']['content']
-        self.publisher_.publish(res_msg)
-        print(res_msg.data)
+        # res_msg = String()
+        # res_msg.data = response['choices'][0]['message']['content']
+        # self.publisher_.publish(res_msg)
+        # print(res_msg.data)
 
 def main(args=None):
     rclpy.init(args=args)

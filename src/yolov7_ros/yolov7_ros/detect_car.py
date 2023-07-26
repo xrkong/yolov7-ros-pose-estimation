@@ -203,7 +203,7 @@ class Yolov7Publisher(rclpy.node.Node):
         # publishing
         #print("objects: ", detections.tolist())
         detection_msg = json.dumps(detections.tolist())
-        save_string_to_csv('/home/kong/my_ws/llm_chatgpt/data/'+img_id, detections.tolist())
+        # save_string_to_csv('/home/kong/my_ws/llm_chatgpt/data/'+img_id, detections.tolist())
         msg = String()
         msg.data = detection_msg
         self.detection_publisher.publish(msg)

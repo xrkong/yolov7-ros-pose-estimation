@@ -12,12 +12,12 @@ def generate_launch_description():
             emulate_tty=True,
             parameters=[{    
                 'topic_name': '/image_raw' ,
-                'publish_rate': 10,
+                'publish_rate': 5,
                 'sort_files': True ,
                 'frame_id': 'camera', 
                 'sleep': 5.0, 
-                'loop': -1, 
-                'image_folder': '/home/kong/dataset/kitti/data_tracking_image_2/training/image_02/0019/' }]
+                'loop': 1, 
+                'image_folder': '/home/kong/psi/dataset/frames/video_0003'}] # '/home/kong/dataset/kitti/data_tracking_image_2/training/image_02/0019/' }]
         ),
         Node(
             package='yolov7_ros',

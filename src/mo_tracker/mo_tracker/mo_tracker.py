@@ -197,12 +197,14 @@ class TrackerNode(rclpy.node.Node):
         self.bbox_subscriber = self.create_subscription(
             String, self.bbox_topic, self.obj_det_callback, 1)
         bbox_topic = self.create_publisher(String, '/limbs_track', 1)
+        self.prompt_publisher = self.create_publisher(
+            String, "/prompt", 10)
 
     def raw_img_callback(self, image):
         self.img = CvBridge().imgmsg_to_cv2(image, desired_encoding='passthrough')
         height, width, channels = self.img.shape
         white_image = np.full((height, width, 3), (255, 255, 255), dtype=np.uint8)
-        img = white_image #self.img.copy()
+        img = self.img.copy() #white_image #self.img.copy()
         if len(self.ped_dets): 
             # draw key points 
             # BUG: key points are not matched with ground turth in image, need to sync
@@ -221,19 +223,19 @@ class TrackerNode(rclpy.node.Node):
             img = draw_detections(img, bboxes, classes, self.class_labels)
             self.obj_dets = []
 
-        #     # tracking 
-        #     tracks = self.sort_tracker_people.getTrackers()
-        #     if len(tracks)>0:
-        #         track_color = self.sort_tracker_people.color_list
-        #         for t, track in enumerate(tracks):
-        #             #track_color = track_color[t]
-        #             [cv2.line(img, (int(track.centroidarr[i][0]),
-        #                         int(track.centroidarr[i][1])), 
-        #                         (int(track.centroidarr[i+1][0]),
-        #                         int(track.centroidarr[i+1][1])),
-        #                         track_color[t], thickness=3) 
-        #                         for i,_ in  enumerate(track.centroidarr) 
-        #                             if i < len(track.centroidarr)-1 ] 
+            # tracking 
+            tracks = self.sort_tracker_people.getTrackers()
+            if len(tracks)>0:
+                track_color = self.sort_tracker_people.color_list
+                for t, track in enumerate(tracks):
+                    #track_color = track_color[t]
+                    [cv2.line(img, (int(track.centroidarr[i][0]),
+                                int(track.centroidarr[i][1])), 
+                                (int(track.centroidarr[i+1][0]),
+                                int(track.centroidarr[i+1][1])),
+                                track_color[t], thickness=3) 
+                                for i,_ in  enumerate(track.centroidarr) 
+                                    if i < len(track.centroidarr)-1 ] 
         
         if len(self.combox_list):
             for i in range(len(self.combox_list)):
@@ -245,8 +247,8 @@ class TrackerNode(rclpy.node.Node):
                 cropped_image = white_image[max(y1-20,0):min(y2+20,height), max(x1-20,0):min(x2+20,width)]
                 file_name = "/home/kong/tmp/images/bridge/"+image.header.frame_id+"_"+str(i)
                 cv2.imwrite(file_name+'.jpg', cropped_image)
-                with open(file_name+'.txt', 'x') as file:
-                    file.write(str(self.combox_list[i][1])+ '\n'+str(self.combox_list[i][2]) )          
+                # with open(file_name+'.txt', 'x') as file:
+                #     file.write(str(self.combox_list[i][1])+ '\n'+str(self.combox_list[i][2]) )          
 
         cv2.imshow("Tracker Output", img)
         cv2.waitKey(1)
@@ -309,7 +311,9 @@ class TrackerNode(rclpy.node.Node):
                   right_shoulder, right_elbow, right_wrist, op_label, op_flg, op_area, round(op_conf,2), op_combox]
             # print(prompt)
             # print(limbs)
-
+            msg = String()
+            msg.data = str(prompt)
+            self.prompt_publisher.publish(msg)
             if op_flg == True:
                 self.combox_list.append([op_combox, prompt, limbs])
 
