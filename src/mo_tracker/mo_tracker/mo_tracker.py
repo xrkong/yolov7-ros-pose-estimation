@@ -243,9 +243,9 @@ class TrackerNode(rclpy.node.Node):
                 #     img, (int(x1), int(y1)), (int(x2), int(y2)), color, 3
                 # )
                 cropped_image = white_image[max(y1-20,0):min(y2+20,height), max(x1-20,0):min(x2+20,width)]
-                file_name = "/home/kong/tmp/images/bridge/"+image.header.frame_id+"_"+str(i)
-                cv2.imwrite(file_name+'.jpg', cropped_image)
-                with open(file_name+'.txt', 'x') as file:
+                file_name = "/home/kong/dataset/hands_up_dataset/hands_up.txt"
+                #cv2.imwrite(file_name+'.jpg', cropped_image)
+                with open(file_name+'.txt', 'a') as file:
                     file.write(str(self.combox_list[i][1])+ '\n'+str(self.combox_list[i][2]) )          
 
         cv2.imshow("Tracker Output", img)
@@ -311,7 +311,8 @@ class TrackerNode(rclpy.node.Node):
             # print(limbs)
 
             if op_flg == True:
-                self.combox_list.append([op_combox, prompt, limbs])
+                result = f'{xyxy_ped} {ped_position} {round(conf, 2)} {left_shoulder} {left_elbow} {left_wrist} {right_shoulder} {right_elbow} {right_wrist} \n'
+                self.combox_list.append(result)
 
     def obj_det_callback(self, objects):
         self.obj_dets = json.loads(objects.data)
