@@ -1,0 +1,15 @@
+image_folder_publisher:
+  ros__parameters:
+    topic_name: "/image_raw"
+    publish_rate: 5
+    sort_files: true 
+    frame_id: "camera"
+    sleep: 5.0
+    loop: 1
+    image_folder: "/home/kong/psi/dataset/frames"
+    splits: ["video_0115"]
+    #   "video_0015","video_0026","video_0034","video_0041",
+    # "video_0050","video_0051","video_0076","video_0087","video_0097",
+    # "video_0109","video_0115","video_0117","video_0122","video_0124",
+    # "video_0125","video_0126","video_0130","video_0131","video_0133",
+    # "video_0139","video_0144","video_0145","video_0146"]

@@ -240,19 +240,19 @@ class TrackerNode(rclpy.node.Node):
         if len(self.combox_list):
             for i in range(len(self.combox_list)):
                 x1, y1, x2, y2 = self.combox_list[i][0]
-                #color = [random.randint(0, 255) for _ in range(3)]
-                # img = cv2.rectangle(
-                #     img, (int(x1), int(y1)), (int(x2), int(y2)), color, 3
-                # )
+                color = [random.randint(0, 255) for _ in range(3)]
+                img = cv2.rectangle(
+                    img, (int(x1), int(y1)), (int(x2), int(y2)), color, 3
+                )
                 cropped_image = white_image[max(y1-20,0):min(y2+20,height), max(x1-20,0):min(x2+20,width)]
                 file_name = "/home/kong/tmp/images/bridge/"+image.header.frame_id+"_"+str(i)
-                cv2.imwrite(file_name+'.jpg', cropped_image)
+                cv2.imwrite(file_name+'.jpg', img)
                 # with open(file_name+'.txt', 'x') as file:
                 #     file.write(str(self.combox_list[i][1])+ '\n'+str(self.combox_list[i][2]) )          
 
         cv2.imshow("Tracker Output", img)
         cv2.waitKey(1)
-        #save_images(img, './images')
+        save_images(img, './images')
 
 
     def ped_det_callback(self, objects):

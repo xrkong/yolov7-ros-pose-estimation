@@ -44,6 +44,21 @@ def save_string_to_csv(file_path, data):
         # Write the string to the CSV file
         writer.writerow([data])
 
+def save_json(file_path, data):
+    file_exists = os.path.exists(file_path)
+    if not file_exists:
+        with open(file_path, 'w') as file:
+            json.dump(data, file)
+
+    with open(file_path, 'r') as file:
+        file_data = json.load(file)
+
+    file_data.update(data)
+
+    with open(file_path, 'w') as file:    
+        json.dump(data, file)
+
+
 def rescale(ori_shape: Tuple[int, int], boxes: Union[torch.Tensor, np.ndarray],
             target_shape: Tuple[int, int]):
     """Rescale the output to the original image shape
@@ -170,8 +185,6 @@ class YoloV7:
                     plot_one_box_kpt(xyxy, im0, label=label, #color=colors(c, True), 
                                 line_thickness=3,kpt_label=True, kpts=kpts, steps=3, 
                                 orig_shape=im0.shape[:2])
-                    #plot_one_box(xyxy, im0, label=label, color=colors(c, True), line_thickness=1)
-
         
         end_time = time.time()  #Calculation for FPS
         fps = 1 / (end_time - start_time)
@@ -290,11 +303,43 @@ class Yolov7Publisher(rclpy.node.Node):
         device='cuda:0')
         '''
 
-        if detections is None:
+        if len(detections[0]) == 0:
             return
         # publishing
         detections[0] = rescale_detection(detections[0], (w_orig, h_orig),(w_scaled, h_scaled))
-        #print("pedestrians: ",detections[0].tolist())
+
+        kpt = {"left shoulder":5,  "left elbow":7,  "left wrist":9,
+            "right shoulder":6, "right elbow":8, "right wrist":10}
+
+        ped_detection = detections[0].tolist()
+        d = {}
+        vid = img_id.split('/')[0]
+        fid = img_id.split('/')[1]
+        d[vid] = {}
+        d[vid][fid] = {}
+        for pid in range(len(ped_detection)):
+            d[vid][fid][pid] = {}
+            d[vid][fid][pid]["bbox"] = [int(x) for x in ped_detection[pid][0:4]]
+            d[vid][fid][pid]["conf"] = round(ped_detection[pid][4], 2)
+            x0 = ped_detection[pid][0]
+            y1 = ped_detection[pid][3] # transform Right Down Coodinate to Rigth Up Coordinate
+            d[vid][fid][pid]["left_shoulder"] = [int(ped_detection[pid][6+kpt["left shoulder"]*3]-x0), int(y1-ped_detection[pid][6+kpt["left shoulder"]*3+1])]
+            d[vid][fid][pid]["left_elbow"] = [int(ped_detection[pid][6+kpt["left elbow"]*3]-x0), int(y1-ped_detection[pid][6+kpt["left elbow"]*3+1])]
+            d[vid][fid][pid]["left_wrist"] = [int(ped_detection[pid][6+kpt["left wrist"]*3]-x0), int(y1-ped_detection[pid][6+kpt["left wrist"]*3+1])]
+            d[vid][fid][pid]["right_shoulder"] = [int(ped_detection[pid][6+kpt["right shoulder"]*3]-x0), int(y1-ped_detection[pid][6+kpt["right shoulder"]*3+1])]
+            d[vid][fid][pid]["right_elbow"] = [int(ped_detection[pid][6+kpt["right elbow"]*3]-x0), int(y1-ped_detection[pid][6+kpt["right elbow"]*3+1])]
+            d[vid][fid][pid]["right_wrist"] = [int(ped_detection[pid][6+kpt["right wrist"]*3]-x0), int(y1-ped_detection[pid][6+kpt["right wrist"]*3+1])]
+
+        json_path = '/home/kong/psi/output.json'
+        file_data = {}
+        if os.path.exists(json_path):
+            with open(json_path, 'r') as file:
+                file_data = json.load(file)
+
+        file_data[vid] = {file_data[vid], d[vid]}
+
+        with open(json_path, 'w') as file:    
+            json.dump(d, file, indent=4)
         #save_string_to_csv('/home/kong/my_ws/llm_chatgpt/data/'+img_id, detections[0].tolist())
 
         detection_msg = json.dumps(detections[0].tolist())

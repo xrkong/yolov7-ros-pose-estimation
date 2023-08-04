@@ -218,7 +218,7 @@ class Yolov7Publisher(rclpy.node.Node):
             vis_msg = self.bridge.cv2_to_imgmsg(cv2.resize(vis_img,(w_scaled, h_scaled)))
             cv2.imshow("Object Detector", vis_img)
             cv2.waitKey(1)
-            #save_images(vis_img, './obj_images')
+            save_images(vis_img, './obj_images')
             vis_msg = self.bridge.cv2_to_imgmsg(vis_img)
             self.visualization_publisher.publish(vis_msg)
 

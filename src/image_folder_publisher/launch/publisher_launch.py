@@ -1,5 +1,7 @@
 from launch import LaunchDescription
 from launch_ros.actions import Node
+import os
+from ament_index_python.packages import get_package_share_directory
 
 def generate_launch_description():
     return LaunchDescription([
@@ -9,13 +11,6 @@ def generate_launch_description():
             name='image_folder_publisher',
             output='screen',
             emulate_tty=True,
-            parameters=[{    
-                'topic_name': '/image_raw' ,
-                'publish_rate': 30,
-                'sort_files': True ,
-                'frame_id': 'camera', 
-                'sleep': 5, 
-                'loop': -1, 
-                'image_folder': '/home/kong/psi/dataset/frames/video_0001'}] # '/home/kong/dataset/kitti/data_tracking_image_2/training/image_02/0007/' }] # 0019 pedestrian, 0005 highway, 007 right
+            parameters=[os.path.join(get_package_share_directory('image_folder_publisher'), "config/conf.yaml")]
         ),
     ])

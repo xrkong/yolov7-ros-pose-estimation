@@ -250,7 +250,7 @@ def attempt_load(weights, map_location=None):
             m.recompute_scale_factor = None  # torch 1.11.0 compatibility
         elif type(m) is Conv:
             m._non_persistent_buffers_set = set()  # pytorch 1.6.0 compatibility
-    
+    print('model load:', len(model))
     if len(model) == 1:
         return model[-1]  # return model
     else:
