@@ -1,6 +1,6 @@
 #!/usr/bin/python3
-from models.experimental import attempt_load
-from utils.general import non_max_suppression
+from .models.experimental import attempt_load
+from .utils.general import non_max_suppression
 from .visualizer import draw_detections
 
 from typing import Tuple, Union

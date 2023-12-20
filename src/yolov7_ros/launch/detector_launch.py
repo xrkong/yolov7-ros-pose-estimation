@@ -18,7 +18,7 @@ def generate_launch_description():
                 'queue_size': 10,
                 'img_width': 320,
                 'img_height': 320,
-                'visualize': True,
+                'visualize': False, # if True, error happends when run it remotely.
                 'device': 'cuda'} ]
         ),
         Node(
@@ -36,7 +36,7 @@ def generate_launch_description():
                 'queue_size': 10,
                 'img_width': 320,
                 'img_height': 320,
-                'visualize': True,
+                'visualize': False,
                 'device': 'cuda'} ]
         )
     ])

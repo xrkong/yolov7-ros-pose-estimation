@@ -4,7 +4,7 @@ from setuptools import setup
 from setuptools import find_packages
 
 package_name = 'yolov7_ros'
-submodules = ["yolov7_ros/utils", "yolov7_ros/models"]
+submodules = ["yolov7_ros.utils", "yolov7_ros.models"]
 
 setup(
     name=package_name,

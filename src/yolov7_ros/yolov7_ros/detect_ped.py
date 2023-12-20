@@ -1,6 +1,6 @@
 #!/usr/bin/python3
-from models.experimental import attempt_load
-from utils.general import non_max_suppression_kpt
+from .models.experimental import attempt_load
+from .utils.general import non_max_suppression_kpt
 from .utils.plots import output_to_keypoint
 from .utils.plots import plot_one_box_kpt
 from .visualizer import draw_detections

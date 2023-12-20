@@ -57,3 +57,4 @@ CATKIN_IGNORE
 log/
 .vscode/
 /images/*
+known_hosts
