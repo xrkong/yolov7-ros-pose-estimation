@@ -37,4 +37,4 @@ Parameters can be found in ```src/yolov7_ros/launch/detector_launch.py```
 ## To-do list
 - [x] build a docker
 - [x] re-factory 
-- [ ] 
+- [ ] TBD
