@@ -18,7 +18,7 @@ from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy
 import json
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
-from std_msgs.msg import String
+from std_msgs.msg import String, Int8
 import warnings
 warnings.filterwarnings("ignore") 
 
@@ -124,11 +124,13 @@ class Yolov7Publisher(rclpy.node.Node):
             device=self.device
         )
         self.camera_info_sub = self.create_subscription(
-            Image, self.img_topic, self.process_img_msg, 10)
+            Image, self.img_topic, self.process_img_msg, 1)
 
         #bbox_topic = self.create_publisher(String, '/yolov7/bbox', 10)
         self.detection_publisher = self.create_publisher(
             String, "/yolov7/bbox", 10)
+        self.car_counter_publisher = self.create_publisher(
+            Int8, "/yolov7/car_counter", 10)
         self.get_logger().info('Hello %s!' % "YOLOv7 initialization complete. Ready to start inference")
 
     def process_img_msg(self, img_msg: Image):
@@ -161,11 +163,17 @@ class Yolov7Publisher(rclpy.node.Node):
             [h_scaled, w_scaled], detections[:, :4], [h_orig, w_orig])
         detections[:, :4] = detections[:, :4].round()
 
-        # publishing
+        # publishing detection
         detection_msg = json.dumps(detections.tolist())
         msg = String()
         msg.data = detection_msg
         self.detection_publisher.publish(msg)
+
+        # publish rear car 
+        msg = Int8()
+        msg.data = detections.size(0)
+        self.car_counter_publisher.publish(msg)
+
 
         # visualizing if required
         if self.visualize:
