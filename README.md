@@ -9,3 +9,15 @@ I made some changes for pedestrian track.
 
 remember to add the path to ```$PYTHONPATH``` or python cannot find the module like    
 ```No module named 'xxxx'```
+
+## todo 
+### yolo node: 
+- [x] images &rarr; label, bounding box
+- [ ] serialize label, ground truth (not kpt), process time.
+
+### llm node:
+- [ ] write request node to those LLM/MLLM
+
+### images publisher: None
+
+### tracker node: None

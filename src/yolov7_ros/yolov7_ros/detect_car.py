@@ -126,8 +126,8 @@ class Yolov7Publisher(rclpy.node.Node):
         visualize_des = ParameterDescriptor(description='flag to enable publishing the detections visualized in the image')
         device_des = ParameterDescriptor(description='device to do inference on (e.g., "cuda" or "cpu")')
 
-        self.declare_parameter('weights_path', '/home/kong/my_ws/nn_models/yolov7/yolov7-w6-pose.pt', weights_path_des)
-        self.declare_parameter('classes_path', '/home/kong/my_ws/yolov7-ros-pose-estimation/src/yolov7_ros/class_labels/berkeley.txt', classs_path_des)
+        self.declare_parameter('weights_path', '/home/kong/ws/yolo_weights/yolov7.pt', weights_path_des)
+        self.declare_parameter('classes_path', '/home/kong/xrkong/yolov7-ros-pose-estimation/src/yolov7_ros/class_labels/coco.txt', classs_path_des)
         self.declare_parameter('img_topic', '/image_raw', img_topic_des)
         self.declare_parameter('conf_thresh', 0.35, conf_thresh_des)
         self.declare_parameter('iou_thresh', 0.45, iou_thresh_des)
@@ -203,7 +203,7 @@ class Yolov7Publisher(rclpy.node.Node):
         # publishing
         #print("objects: ", detections.tolist())
         detection_msg = json.dumps(detections.tolist())
-        save_string_to_csv('/home/kong/my_ws/llm_chatgpt/data/'+img_id, detections.tolist())
+        save_string_to_csv('/home/kong/ws/obj_res/'+img_id, detections.tolist())
         msg = String()
         msg.data = detection_msg
         self.detection_publisher.publish(msg)

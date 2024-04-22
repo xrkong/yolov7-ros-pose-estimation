@@ -58,3 +58,5 @@ log/
 .vscode/
 /images/*
 install/
+tmp
+pose_images
