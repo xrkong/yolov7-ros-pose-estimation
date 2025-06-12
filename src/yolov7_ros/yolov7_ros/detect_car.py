@@ -52,7 +52,7 @@ class YoloV7:
                  device: str = "cuda"):
         self.conf_thresh = conf_thresh
         self.iou_thresh = iou_thresh
-        self.device = device
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.model = attempt_load(weights, map_location=device)
         self.model.eval()
 
