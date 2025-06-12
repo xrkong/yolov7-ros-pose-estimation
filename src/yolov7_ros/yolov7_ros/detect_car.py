@@ -211,15 +211,18 @@ class Yolov7Publisher(rclpy.node.Node):
         # visualizing if required
         if self.visualize:
             bboxes = [[int(x1), int(y1), int(x2), int(y2)]
-                      for x1, y1, x2, y2 in detections[:, :4].tolist()]
-            classes = [int(c) for c in detections[:, 5].tolist()]
+                      for x1, y1, x2, y2, c in detections[:, :5].tolist() if int(c) < 3]
+
+            classes = [int(c) for c in detections[:, 5].tolist() if int(c) < 3]
             vis_img = draw_detections(np_img_orig, bboxes, classes,
                                       self.class_labels)
-            vis_msg = self.bridge.cv2_to_imgmsg(cv2.resize(vis_img,(w_scaled, h_scaled)))
-            cv2.imshow("Object Detector", vis_img)
-            cv2.waitKey(1)
-            #save_images(vis_img, './obj_images')
-            vis_msg = self.bridge.cv2_to_imgmsg(vis_img)
+            #cv2.imwrite('./images/'+img_id+'_obj.jpg', vis_img)
+            #vis_msg = self.bridge.cv2_to_imgmsg(cv2.resize(vis_img,(w_scaled, h_scaled)))
+            # cv2.imshow("Object Detector", vis_img)
+            # cv2.waitKey(1)
+            #save_images(vis_img, './images/'+img_id+'_obj.jpg')
+            
+            vis_msg = self.bridge.cv2_to_imgmsg(vis_img, encoding='bgr8', header=img_msg.header)
             self.visualization_publisher.publish(vis_msg)
 
 def main():

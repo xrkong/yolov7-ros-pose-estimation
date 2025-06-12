@@ -161,7 +161,7 @@ class YoloV7:
             if len(detections_pdst):  #check if no pose
                 for c in det[:, 5].unique(): # Print results
                     n = (det[:, 5] == c).sum()  # detections per class
-                    print("{} Objects in Current Frame".format(n))
+                    #print("{} Objects in Current Frame".format(n))
                 
                 for det_index, (*xyxy, conf, cls) in enumerate(reversed(det[:,:6])): #loop over poses for drawing on frame
                     c = int(cls)  # integer class
@@ -288,7 +288,7 @@ class Yolov7Publisher(rclpy.node.Node):
         3.54366e+02, 5.52154e+02, 6.15365e-03, 
         2.96931e+02, 5.64074e+02, 7.98799e-03]], # K{16}_x, K{16}_y, K{16}_conf
         device='cuda:0')
-        '''
+        ''' 
 
         if detections is None:
             return
@@ -301,13 +301,40 @@ class Yolov7Publisher(rclpy.node.Node):
         msg = String()
         msg.data = detection_msg
         self.detection_publisher.publish(msg)
+        if len(detections[0]) == 0:
+            return
+        
+        # hand raised
+        kpt_index = {'left_up_arm': 6+5*3, 'left_down_arm': 6+7*3, 'right_up_arm': 6+6*3, 'right_down_arm': 6+8*3}
+        if detections[0][0][kpt_index['left_up_arm']] > detections[0][0][kpt_index['left_down_arm']] and \
+            detections[0][0][kpt_index['left_up_arm']+1] > self.conf_thresh and \
+            detections[0][0][kpt_index['left_down_arm']+1] > self.conf_thresh:
+            print("Hand raised")
+            cv2.imwrite('./dataset/'+img_id+'_1.jpg', im0) # up
+        elif detections[0][0][kpt_index['right_up_arm']] > detections[0][0][kpt_index['right_down_arm']] and \
+            detections[0][0][kpt_index['right_up_arm']+1] > self.conf_thresh and \
+            detections[0][0][kpt_index['right_down_arm']+1] > self.conf_thresh:
+            print("Hand raised")
+            cv2.imwrite('./dataset/'+img_id+'_1.jpg', im0)            
+        elif detections[0][0][kpt_index['left_up_arm']] < detections[0][0][kpt_index['left_down_arm']] and \
+            detections[0][0][kpt_index['left_up_arm']+1] > self.conf_thresh and \
+            detections[0][0][kpt_index['left_down_arm']+1] > self.conf_thresh:
+            cv2.imwrite('./dataset/'+img_id+'_0.jpg', im0) # down
+        elif detections[0][0][kpt_index['right_up_arm']] < detections[0][0][kpt_index['right_down_arm']] and \
+            detections[0][0][kpt_index['right_up_arm']+1] > self.conf_thresh and \
+            detections[0][0][kpt_index['right_down_arm']+1] > self.conf_thresh:
+            cv2.imwrite('./dataset/'+img_id+'_0.jpg', im0)
+
+        # if detections[0] is not None:
+        #     cv2.imwrite('./dataset/'+img_id+'.jpg', im0)
 
         # visualizing if required
-        if self.visualize:
-            im0 = cv2.resize(im0,(w_orig, h_orig))
-            cv2.imshow("Pedestrian Detector", im0)
-            cv2.waitKey(1) 
-            save_images(im0, './pose_images')
+        # if self.visualize:
+        #     im0 = cv2.resize(im0,(w_orig, h_orig))
+        #     # cv2.imshow("Pedestrian Detector", im0)
+        #     # cv2.waitKey(1) 
+        #     # save_images(im0, './images/'+img_id+'_ped.jpg')
+        #     cv2.imwrite('./images/'+img_id+'_ped.jpg', im0)
 
 def main():
     rclpy.init()

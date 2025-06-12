@@ -58,5 +58,8 @@ log/
 .vscode/
 /images/*
 install/
-tmp
+tmp/
+dataset/
+images/
 pose_images
+mllm/

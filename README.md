@@ -7,8 +7,8 @@ src/pose-tracker/src/sort.py from https://github.com/abewley/sort
 
 I made some changes for pedestrian track. 
 
-remember to add the path to ```$PYTHONPATH``` or python cannot find the module like    
-```No module named 'xxxx'```
+> remember to add the path to ```$PYTHONPATH``` or python cannot find the module like    
+> ```No module named 'xxxx'```
 
 ## todo 
 ### yolo node: 
@@ -21,3 +21,13 @@ remember to add the path to ```$PYTHONPATH``` or python cannot find the module l
 ### images publisher: None
 
 ### tracker node: None
+
+### experiments
+1. Sort a small dataset (~10 images for 10 stops, ~100 images)
+1. Ground truth them (80% hand raised, 20% hand down)
+1. Test different prompts in MLLM
+
+
+### ideas
+1. Using yolo to enhance LLM understanding
+    

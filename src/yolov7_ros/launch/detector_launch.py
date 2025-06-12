@@ -30,7 +30,7 @@ def generate_launch_description():
             parameters=[{    
                 'weights_path': '/home/kong/ws/yolo_weights/yolov7-w6-pose.pt',
                 'classes_path': '/home/kong/xrkong/yolov7-ros-pose-estimation/src/yolov7_ros/class_labels/coco.txt',
-                'img_topic': '/image_raw',
+                'img_topic': '/yolov7/visualization',
                 'conf_thresh': 0.35,
                 'iou_thresh': 0.45,
                 'queue_size': 10,
